@@ -17,8 +17,7 @@
         "websocket": "ws://localhost:7737/ws/",
         "priority": 2
       }
-    ],
-    "signalingUrl": "wss://heatwallet.com:7755/ws/"
+    ]
   },
 
   "testnet": {
@@ -39,8 +38,7 @@
         "websocket": "ws://localhost:7755/ws/",
         "priority": 1
       }
-    ],
-    "signalingUrl": "wss://alpha.heatledger.com:7755/ws/"
+    ]
   },
  
   "betanet": {}
