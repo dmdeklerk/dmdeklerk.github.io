@@ -1,0 +1,29 @@
+{
+  "name": "heatwallet",
+  "version": "2.9.0e",
+  "description": "Heat Ledger Desktop Wallet",
+  "main": "electron/electron.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Heat-Ledger-Ltd/heatwallet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Heat-Ledger-Ltd/heatwallet/issues"
+  },
+  "author": {
+    "name": "Heat Ledger Ltd.",
+    "email": "info@heatledger.com",
+    "url": "http://heatledger.com"
+  },
+  "license": "MIT",
+  "homepage": "http://heatledger.com",
+  "dependencies": {
+    "child-process-promise": "^2.2.0",
+    "tree-kill": "^1.1.0",
+    "electron-contextmenu-middleware": "^1.0.3",
+    "electron-input-menu": "^2.1.0"
+  }
+}

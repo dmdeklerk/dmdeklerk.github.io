@@ -8122,7 +8122,7 @@ var SettingsService = (function () {
         this.env = env;
         this.http = http;
         this.VERSION = "3.0.0";
-        this.BUILD = "1562238064";
+        this.BUILD = "1562238966";
         this.settings = {};
         this.applyFailoverConfig();
         this.settings[SettingsService_1.DATEFORMAT_DEFAULT] = 'yyyy-mm-dd HH:MM:ss';
@@ -14389,6 +14389,1063 @@ var ServerComponent = (function () {
     ], ServerComponent);
     return ServerComponent;
 }());
+var TokenBalance = (function () {
+    function TokenBalance(name, symbol, address) {
+        this.name = name;
+        this.symbol = symbol;
+        this.address = address;
+        this.isTokenBalance = true;
+        this.visible = false;
+    }
+    return TokenBalance;
+}());
+var CurrencyBalance = (function () {
+    function CurrencyBalance(name, symbol, address, secretPhrase) {
+        this.name = name;
+        this.symbol = symbol;
+        this.address = address;
+        this.secretPhrase = secretPhrase;
+        this.isCurrencyBalance = true;
+        this.inUse = false;
+        this.tokens = [];
+        this.visible = false;
+    }
+    CurrencyBalance.prototype.unlock = function (noPathChange) {
+        var user = heat.$inject.get('user');
+        var $location = heat.$inject.get('$location');
+        var lightwalletService = heat.$inject.get('lightwalletService');
+        var bip44Compatible = lightwalletService.validSeed(this.secretPhrase);
+        var currency = null;
+        if (this.name == 'Ethereum') {
+            currency = new ETHCurrency(this.secretPhrase, this.address);
+        }
+        else if (this.name == 'Bitcoin') {
+            currency = new BTCCurrency(this.secretPhrase, this.address);
+        }
+        else if (this.name == 'FIMK') {
+            currency = new FIMKCurrency(this.secretPhrase, this.address);
+        }
+        else if (this.name == 'NXT') {
+            currency = new NXTCurrency(this.secretPhrase, this.address);
+        }
+        else if (this.name == 'ARDOR') {
+            currency = new ARDRCurrency(this.secretPhrase, this.address);
+        }
+        else {
+            currency = new HEATCurrency(this.secretPhrase, this.address);
+        }
+        user.unlock(this.secretPhrase, null, bip44Compatible, currency).then(function () {
+            if (!noPathChange) {
+                $location.path(currency.homePath);
+                heat.fullApplicationScopeReload();
+            }
+        });
+    };
+    return CurrencyBalance;
+}());
+var CurrencyAddressLoading = (function () {
+    function CurrencyAddressLoading(name) {
+        this.name = name;
+        this.isCurrencyAddressLoading = true;
+        this.visible = false;
+    }
+    return CurrencyAddressLoading;
+}());
+var CurrencyAddressCreate = (function () {
+    function CurrencyAddressCreate(name, wallet) {
+        this.name = name;
+        this.wallet = wallet;
+        this.isCurrencyAddressCreate = true;
+        this.visible = false;
+        this.hidden = true;
+    }
+    CurrencyAddressCreate.prototype.createAddress = function (component) {
+        var _this = this;
+        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
+        if (currencyBalances.length == 0) {
+            var nextAddress = this.wallet.addresses[0];
+            var newCurrencyBalance = new CurrencyBalance('Ethereum', 'ETH', nextAddress.address, nextAddress.privateKey);
+            component.rememberAdressCreated(this.parent.account, nextAddress.address);
+            newCurrencyBalance.visible = this.parent.expanded;
+            this.parent.currencies.push(newCurrencyBalance);
+            this.flatten();
+            return true;
+        }
+        var lastAddress = currencyBalances[currencyBalances.length - 1]['address'];
+        if (!currencyBalances[currencyBalances.length - 1]['inUse']) {
+            return false;
+        }
+        for (var i = 0; i < this.wallet.addresses.length; i++) {
+            if (this.wallet.addresses[i].address == lastAddress) {
+                if (i == this.wallet.addresses.length - 1)
+                    return;
+                var nextAddress = this.wallet.addresses[i + 1];
+                var newCurrencyBalance = new CurrencyBalance('Ethereum', 'ETH', nextAddress.address, nextAddress.privateKey);
+                component.rememberAdressCreated(this.parent.account, nextAddress.address);
+                newCurrencyBalance.visible = this.parent.expanded;
+                var index = this.parent.currencies.indexOf(currencyBalances[currencyBalances.length - 1]) + 1;
+                this.parent.currencies.splice(index, 0, newCurrencyBalance);
+                this.flatten();
+                return true;
+            }
+        }
+        return false;
+    };
+    CurrencyAddressCreate.prototype.createBtcAddress = function (component) {
+        var _this = this;
+        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
+        if (currencyBalances.length == 0) {
+            var nextAddress = this.wallet.addresses[0];
+            var newCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', nextAddress.address, nextAddress.privateKey);
+            component.rememberAdressCreated(this.parent.account, nextAddress.address);
+            newCurrencyBalance.visible = this.parent.expanded;
+            this.parent.currencies.push(newCurrencyBalance);
+            this.flatten();
+            return true;
+        }
+        var lastAddress = currencyBalances[currencyBalances.length - 1]['address'];
+        if (!currencyBalances[currencyBalances.length - 1]['inUse']) {
+            return false;
+        }
+        for (var i = 0; i < this.wallet.addresses.length; i++) {
+            if (this.wallet.addresses[i].address == lastAddress) {
+                if (i == this.wallet.addresses.length - 1)
+                    return;
+                var nextAddress = this.wallet.addresses[i + 1];
+                var newCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', nextAddress.address, nextAddress.privateKey);
+                component.rememberAdressCreated(this.parent.account, nextAddress.address);
+                newCurrencyBalance.visible = this.parent.expanded;
+                var index = this.parent.currencies.indexOf(currencyBalances[currencyBalances.length - 1]) + 1;
+                this.parent.currencies.splice(index, 0, newCurrencyBalance);
+                this.flatten();
+                return true;
+            }
+        }
+        return false;
+    };
+    CurrencyAddressCreate.prototype.createFIMKAddress = function (component) {
+        var _this = this;
+        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
+        if (currencyBalances.length == 0) {
+            var nextAddress = this.wallet.addresses[0];
+            var newCurrencyBalance = new CurrencyBalance('FIMK', 'FIM', nextAddress.address, nextAddress.privateKey);
+            component.rememberAdressCreated(this.parent.account, nextAddress.address);
+            newCurrencyBalance.visible = this.parent.expanded;
+            this.parent.currencies.push(newCurrencyBalance);
+            this.flatten();
+            return true;
+        }
+        return false;
+    };
+    CurrencyAddressCreate.prototype.createNXTAddress = function (component) {
+        var _this = this;
+        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
+        if (currencyBalances.length == 0) {
+            var nextAddress = this.wallet.addresses[0];
+            var newCurrencyBalance = new CurrencyBalance('NXT', 'NXT', nextAddress.address, nextAddress.privateKey);
+            component.rememberAdressCreated(this.parent.account, nextAddress.address);
+            newCurrencyBalance.visible = this.parent.expanded;
+            this.parent.currencies.push(newCurrencyBalance);
+            this.flatten();
+            return true;
+        }
+        return false;
+    };
+    CurrencyAddressCreate.prototype.createARDRAddress = function (component) {
+        var _this = this;
+        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
+        if (currencyBalances.length == 0) {
+            var nextAddress = this.wallet.addresses[0];
+            var newCurrencyBalance = new CurrencyBalance('ARDOR', 'ARDR', nextAddress.address, nextAddress.privateKey);
+            component.rememberAdressCreated(this.parent.account, nextAddress.address);
+            newCurrencyBalance.visible = this.parent.expanded;
+            this.parent.currencies.push(newCurrencyBalance);
+            this.flatten();
+            return true;
+        }
+        return false;
+    };
+    return CurrencyAddressCreate;
+}());
+var WalletEntry = (function () {
+    function WalletEntry(account, name, component) {
+        this.account = account;
+        this.name = name;
+        this.component = component;
+        this.isWalletEntry = true;
+        this.selected = true;
+        this.currencies = [];
+        this.unlocked = false;
+        this.visible = true;
+        this.expanded = false;
+        this.btcWalletAddressIndex = 0;
+        this.identifier = name ? name + " | " + account : account;
+    }
+    WalletEntry.prototype.toggle = function (forceVisible) {
+        var _this = this;
+        this.expanded = forceVisible || !this.expanded;
+        this.currencies.forEach(function (curr) {
+            var currency = curr;
+            currency.visible = _this.expanded;
+            if (currency.tokens) {
+                currency.tokens.forEach(function (token) {
+                    token.visible = _this.expanded;
+                });
+            }
+        });
+        if (this.expanded) {
+            this.component.loadEthereumAddresses(this);
+            this.component.loadBitcoinAddresses(this);
+            this.component.loadFIMKAddresses(this);
+            this.component.loadNXTAddresses(this);
+            this.component.loadARDORAddresses(this);
+        }
+    };
+    WalletEntry.prototype.showSecretPhrase = function () {
+        var panel = heat.$inject.get('panel');
+        panel.show("\n      <div layout=\"column\" flex class=\"toolbar-copy-passphrase\">\n        <md-input-container flex>\n          <textarea rows=\"2\" flex ng-bind=\"vm.secretPhrase\" readonly ng-trim=\"false\"></textarea>\n        </md-input-container>\n      </div>\n    ", {
+            secretPhrase: this.secretPhrase
+        });
+    };
+    return WalletEntry;
+}());
+var WalletComponent = (function () {
+    function WalletComponent($scope, $q, localKeyStore, walletFile, $window, lightwalletService, heat, assetInfo, ethplorer, $mdToast, $mdDialog, clipboard, user, bitcoreService, fimkCryptoService, nxtCryptoService, ardorCryptoService, nxtBlockExplorerService, ardorBlockExplorerService) {
+        var _this = this;
+        this.$scope = $scope;
+        this.$q = $q;
+        this.localKeyStore = localKeyStore;
+        this.walletFile = walletFile;
+        this.$window = $window;
+        this.lightwalletService = lightwalletService;
+        this.heat = heat;
+        this.assetInfo = assetInfo;
+        this.ethplorer = ethplorer;
+        this.$mdToast = $mdToast;
+        this.$mdDialog = $mdDialog;
+        this.clipboard = clipboard;
+        this.user = user;
+        this.bitcoreService = bitcoreService;
+        this.fimkCryptoService = fimkCryptoService;
+        this.nxtCryptoService = nxtCryptoService;
+        this.ardorCryptoService = ardorCryptoService;
+        this.nxtBlockExplorerService = nxtBlockExplorerService;
+        this.ardorBlockExplorerService = ardorBlockExplorerService;
+        this.selectAll = true;
+        this.allLocked = true;
+        this.entries = [];
+        this.walletEntries = [];
+        this.createdAddresses = {};
+        this.chains = [{ name: 'ETH', disabled: false }, { name: 'BTC', disabled: false }, { name: 'FIMK', disabled: false }, { name: 'NXT', disabled: true }, { name: 'ARDR', disabled: true }];
+        this.selectedChain = '';
+        nxtBlockExplorerService.getBlockchainStatus().then(function () {
+            var nxtChain = { name: 'NXT', disabled: false };
+            var index = _this.chains.findIndex(function (entry) { return entry.name === nxtChain.name; });
+            _this.chains[index] = nxtChain;
+        });
+        ardorBlockExplorerService.getBlockchainStatus().then(function () {
+            var ardorChain = { name: 'ARDR', disabled: false };
+            var index = _this.chains.findIndex(function (entry) { return entry.name === ardorChain.name; });
+            _this.chains[index] = ardorChain;
+        });
+        this.initLocalKeyStore();
+        this.initCreatedAddresses();
+    }
+    WalletComponent.prototype.createAccount = function ($event) {
+        if (this.$scope['vm'].selectedChain === 'ETH') {
+            this.createEthAccount($event);
+        }
+        else if (this.$scope['vm'].selectedChain === 'BTC') {
+            this.createBtcAccount($event);
+        }
+        else if (this.$scope['vm'].selectedChain === 'FIMK') {
+            this.createFIMKAccount($event);
+        }
+        else if (this.$scope['vm'].selectedChain === 'NXT') {
+            this.createNXTAccount($event);
+        }
+        else if (this.$scope['vm'].selectedChain === 'ARDR') {
+            this.createARDRAccount($event);
+        }
+    };
+    WalletComponent.prototype.initLocalKeyStore = function () {
+        var _this = this;
+        this.entries = [];
+        this.walletEntries = [];
+        this.localKeyStore.list().map(function (account) {
+            var name = _this.localKeyStore.keyName(account);
+            var walletEntry = new WalletEntry(account, name, _this);
+            _this.walletEntries.push(walletEntry);
+        });
+        this.walletEntries.forEach(function (walletEntry) {
+            var password = _this.localKeyStore.getPasswordForAccount(walletEntry.account);
+            if (password) {
+                try {
+                    var key = _this.localKeyStore.load(walletEntry.account, password);
+                    if (key) {
+                        walletEntry.secretPhrase = key.secretPhrase;
+                        walletEntry.bip44Compatible = _this.lightwalletService.validSeed(key.secretPhrase);
+                        walletEntry.unlocked = true;
+                        walletEntry.pin = password;
+                        _this.initWalletEntry(walletEntry);
+                    }
+                }
+                catch (e) {
+                    console.log(e);
+                }
+            }
+        });
+        this.flatten();
+    };
+    WalletComponent.prototype.initCreatedAddresses = function () {
+        for (var i = 0; i < window.localStorage.length; i++) {
+            var key = window.localStorage.key(i);
+            var data = key.match(/eth-address-created:(.+):(.+)/);
+            if (data) {
+                var acc = data[1], addr = data[2];
+                this.createdAddresses[acc] = this.createdAddresses[acc] || [];
+                this.createdAddresses[acc].push(addr);
+            }
+        }
+    };
+    WalletComponent.prototype.rememberAdressCreated = function (account, ethAddress) {
+        this.createdAddresses[account] = this.createdAddresses[account] || [];
+        this.createdAddresses[account].push(ethAddress);
+        window.localStorage.setItem("eth-address-created:" + account + ":" + ethAddress, "1");
+    };
+    WalletComponent.prototype.flatten = function () {
+        var _this = this;
+        this.$scope.$evalAsync(function () {
+            _this.entries = [];
+            _this.walletEntries.forEach(function (walletEntry) {
+                _this.entries.push(walletEntry);
+                walletEntry.currencies.forEach(function (curr) {
+                    var currencyBalance = curr;
+                    _this.entries.push(currencyBalance);
+                    if (currencyBalance.tokens) {
+                        currencyBalance.tokens.forEach(function (tokenBalance) {
+                            _this.entries.push(tokenBalance);
+                        });
+                    }
+                });
+            });
+        });
+    };
+    WalletComponent.prototype.pageAddAddSecretPhrase = function ($event) {
+        var _this = this;
+        this.promptSecretPlusPassword($event).then(function (data) {
+            var account = heat.crypto.getAccountId(data.secretPhrase);
+            var key = {
+                account: account,
+                secretPhrase: data.secretPhrase,
+                pincode: data.password,
+                name: ''
+            };
+            _this.localKeyStore.add(key);
+            _this.$scope.$evalAsync(function () {
+                _this.initLocalKeyStore();
+            });
+        });
+    };
+    WalletComponent.prototype.pageAddFileInputChange = function (files) {
+        var _this = this;
+        if (files && files[0]) {
+            var reader_2 = new FileReader();
+            reader_2.onload = function () {
+                _this.$scope.$evalAsync(function () {
+                    var fileContents = reader_2.result;
+                    var wallet = _this.walletFile.createFromText(fileContents);
+                    if (wallet) {
+                        var addedKeys = _this.localKeyStore.import(wallet);
+                        _this.$scope.$evalAsync(function () {
+                            _this.initLocalKeyStore();
+                        });
+                        var message = "Imported " + addedKeys.length + " keys into this device";
+                        _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
+                    }
+                });
+            };
+            reader_2.readAsText(files[0]);
+        }
+    };
+    WalletComponent.prototype.remove = function ($event, entry) {
+        var _this = this;
+        dialogs.prompt($event, 'Remove Wallet Entry', "This completely removes the wallet entry from your device.\n       Please enter your Password (or Pin Code) to confirm you wish to remove this entry", '').then(function (pin) {
+            if (pin == entry.pin) {
+                _this.localKeyStore.remove(entry.account);
+                _this.initLocalKeyStore();
+            }
+        });
+    };
+    WalletComponent.prototype.unlock = function ($event, selectedWalletEntry) {
+        var _this = this;
+        dialogs.prompt($event, 'Enter Password (or Pin)', 'Please enter your Password (or Pin Code) to unlock', '').then(function (pin) {
+            var count = 0;
+            _this.walletEntries.forEach(function (walletEntry) {
+                if (!walletEntry.secretPhrase) {
+                    var key = _this.localKeyStore.load(walletEntry.account, pin);
+                    if (key) {
+                        count += 1;
+                        _this.localKeyStore.rememberPassword(walletEntry.account, pin);
+                        walletEntry.pin = pin;
+                        walletEntry.secretPhrase = key.secretPhrase;
+                        walletEntry.bip44Compatible = _this.lightwalletService.validSeed(key.secretPhrase);
+                        walletEntry.unlocked = true;
+                        _this.initWalletEntry(walletEntry);
+                    }
+                }
+            });
+            var message = "Unlocked " + (count ? count : 'NO') + " entries";
+            _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
+            selectedWalletEntry.toggle(true);
+            if (!_this.user.unlocked) {
+                if (selectedWalletEntry.unlocked) {
+                    for (var i = 0; i < selectedWalletEntry.currencies.length; i++) {
+                        var balance = selectedWalletEntry.currencies[i];
+                        if (balance.isCurrencyBalance) {
+                            balance.unlock(true);
+                            return;
+                        }
+                    }
+                }
+                for (var i = 0; i < _this.entries.length; i++) {
+                    var balance = selectedWalletEntry.currencies[i];
+                    if (balance.isCurrencyBalance) {
+                        balance.unlock(true);
+                        return;
+                    }
+                }
+            }
+        });
+    };
+    WalletComponent.prototype.initWalletEntry = function (walletEntry) {
+        var _this = this;
+        this.allLocked = false;
+        var heatAccount = heat.crypto.getAccountIdFromPublicKey(heat.crypto.secretPhraseToPublicKey(walletEntry.secretPhrase));
+        var heatCurrencyBalance = new CurrencyBalance('HEAT', 'HEAT', heatAccount, walletEntry.secretPhrase);
+        heatCurrencyBalance.visible = walletEntry.expanded;
+        walletEntry.currencies.push(heatCurrencyBalance);
+        this.flatten();
+        this.heat.api.getAccountByNumericId(heatAccount).then(function (account) {
+            _this.$scope.$evalAsync(function () {
+                var balanceUnconfirmed = utils.formatQNT(account.unconfirmedBalance, 8);
+                heatCurrencyBalance.balance = balanceUnconfirmed;
+            });
+            _this.getAccountAssets(heatAccount).then(function (assetInfos) {
+                heatCurrencyBalance.tokens = [];
+                assetInfos.forEach(function (assetInfo) {
+                    var tokenBalance = new TokenBalance(assetInfo.name, assetInfo.symbol, assetInfo.id);
+                    tokenBalance.balance = utils.formatQNT(assetInfo.userBalance, 8);
+                    tokenBalance.visible = walletEntry.expanded;
+                    heatCurrencyBalance.tokens.push(tokenBalance);
+                });
+                _this.flatten();
+            });
+        }, function () {
+            _this.$scope.$evalAsync(function () {
+                heatCurrencyBalance.balance = "Address is unused";
+                heatCurrencyBalance.symbol = '';
+            });
+        });
+        this.bitcoreService.unlock(walletEntry.secretPhrase).then(function (wallet) {
+            if (wallet !== undefined) {
+                var btcCurrencyAddressLoading = new CurrencyAddressLoading('Bitcoin');
+                btcCurrencyAddressLoading.visible = walletEntry.expanded;
+                btcCurrencyAddressLoading.wallet = wallet;
+                walletEntry.currencies.push(btcCurrencyAddressLoading);
+                var btcCurrencyAddressCreate = new CurrencyAddressCreate('Bitcoin', wallet);
+                btcCurrencyAddressCreate.visible = walletEntry.expanded;
+                btcCurrencyAddressCreate.parent = walletEntry;
+                btcCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
+                walletEntry.currencies.push(btcCurrencyAddressCreate);
+                _this.flatten();
+                if (walletEntry.expanded) {
+                    _this.loadBitcoinAddresses(walletEntry);
+                }
+            }
+        });
+        this.lightwalletService.unlock(walletEntry.secretPhrase, "").then(function (wallet) {
+            var ethCurrencyAddressLoading = new CurrencyAddressLoading('Ethereum');
+            ethCurrencyAddressLoading.visible = walletEntry.expanded;
+            ethCurrencyAddressLoading.wallet = wallet;
+            walletEntry.currencies.push(ethCurrencyAddressLoading);
+            var ethCurrencyAddressCreate = new CurrencyAddressCreate('Ethereum', wallet);
+            ethCurrencyAddressCreate.visible = walletEntry.expanded;
+            ethCurrencyAddressCreate.parent = walletEntry;
+            ethCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
+            walletEntry.currencies.push(ethCurrencyAddressCreate);
+            _this.flatten();
+            if (walletEntry.expanded) {
+                _this.loadEthereumAddresses(walletEntry);
+            }
+        });
+        this.fimkCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
+            _this.fimkCryptoService.getSocket().then(function () {
+                var fimkCurrencyAddressLoading = new CurrencyAddressLoading('FIMK');
+                fimkCurrencyAddressLoading.visible = walletEntry.expanded;
+                fimkCurrencyAddressLoading.wallet = wallet;
+                walletEntry.currencies.push(fimkCurrencyAddressLoading);
+            });
+            var fimkCurrencyAddressCreate = new CurrencyAddressCreate('FIMK', wallet);
+            fimkCurrencyAddressCreate.visible = walletEntry.expanded;
+            fimkCurrencyAddressCreate.parent = walletEntry;
+            fimkCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
+            walletEntry.currencies.push(fimkCurrencyAddressCreate);
+            if (walletEntry.expanded) {
+                _this.loadFIMKAddresses(walletEntry);
+            }
+        });
+        this.nxtCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
+            var nxtCurrencyAddressCreate = new CurrencyAddressCreate('NXT', wallet);
+            nxtCurrencyAddressCreate.visible = walletEntry.expanded;
+            nxtCurrencyAddressCreate.parent = walletEntry;
+            nxtCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
+            walletEntry.currencies.push(nxtCurrencyAddressCreate);
+            _this.nxtBlockExplorerService.getBlockchainStatus().then(function () {
+                var nxtCurrencyAddressLoading = new CurrencyAddressLoading('NXT');
+                nxtCurrencyAddressLoading.visible = walletEntry.expanded;
+                nxtCurrencyAddressLoading.wallet = wallet;
+                walletEntry.currencies.push(nxtCurrencyAddressLoading);
+                if (walletEntry.expanded) {
+                    _this.loadNXTAddresses(walletEntry);
+                }
+            });
+        });
+        this.ardorCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
+            var ardorCurrencyAddressCreate = new CurrencyAddressCreate('ARDOR', wallet);
+            ardorCurrencyAddressCreate.visible = walletEntry.expanded;
+            ardorCurrencyAddressCreate.parent = walletEntry;
+            ardorCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
+            walletEntry.currencies.push(ardorCurrencyAddressCreate);
+            _this.ardorBlockExplorerService.getBlockchainStatus().then(function () {
+                var ardorCurrencyAddressLoading = new CurrencyAddressLoading('ARDOR');
+                ardorCurrencyAddressLoading.visible = walletEntry.expanded;
+                ardorCurrencyAddressLoading.wallet = wallet;
+                walletEntry.currencies.push(ardorCurrencyAddressLoading);
+                if (walletEntry.expanded) {
+                    _this.loadARDORAddresses(walletEntry);
+                }
+            });
+        });
+    };
+    WalletComponent.prototype.loadNXTAddresses = function (walletEntry) {
+        var _this = this;
+        var nxtCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'NXT'; });
+        if (!nxtCurrencyAddressLoading)
+            return;
+        this.nxtCryptoService.refreshAdressBalances(nxtCurrencyAddressLoading.wallet).then(function () {
+            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
+                return;
+            var index = walletEntry.currencies.indexOf(nxtCurrencyAddressLoading);
+            nxtCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
+                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
+                if (address.inUse || wasCreated) {
+                    var nxtCurrencyBalance_1 = new CurrencyBalance('NXT', 'NXT', address.address, address.privateKey);
+                    nxtCurrencyBalance_1.balance = address.balance ? address.balance + "" : "0";
+                    nxtCurrencyBalance_1.visible = walletEntry.expanded;
+                    nxtCurrencyBalance_1.inUse = wasCreated ? false : true;
+                    walletEntry.currencies.splice(index, 0, nxtCurrencyBalance_1);
+                    index++;
+                    if (address.tokensBalances) {
+                        address.tokensBalances.forEach(function (balance) {
+                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
+                            tokenBalance.balance = utils.commaFormat(balance.balance);
+                            tokenBalance.visible = walletEntry.expanded;
+                            nxtCurrencyBalance_1.tokens.push(tokenBalance);
+                        });
+                    }
+                }
+            });
+            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != nxtCurrencyAddressLoading; });
+            _this.flatten();
+        });
+    };
+    WalletComponent.prototype.loadARDORAddresses = function (walletEntry) {
+        var _this = this;
+        var ardorCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'ARDOR'; });
+        if (!ardorCurrencyAddressLoading)
+            return;
+        this.ardorCryptoService.refreshAdressBalances(ardorCurrencyAddressLoading.wallet).then(function () {
+            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
+                return;
+            var index = walletEntry.currencies.indexOf(ardorCurrencyAddressLoading);
+            ardorCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
+                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
+                if (address.inUse || wasCreated) {
+                    var nxtCurrencyBalance_2 = new CurrencyBalance('ARDOR', 'ARDR', address.address, address.privateKey);
+                    nxtCurrencyBalance_2.balance = address.balance ? address.balance + "" : "0";
+                    nxtCurrencyBalance_2.visible = walletEntry.expanded;
+                    nxtCurrencyBalance_2.inUse = wasCreated ? false : true;
+                    walletEntry.currencies.splice(index, 0, nxtCurrencyBalance_2);
+                    index++;
+                    if (address.tokensBalances) {
+                        address.tokensBalances.forEach(function (balance) {
+                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
+                            tokenBalance.balance = utils.commaFormat(balance.balance);
+                            tokenBalance.visible = walletEntry.expanded;
+                            nxtCurrencyBalance_2.tokens.push(tokenBalance);
+                        });
+                    }
+                }
+            });
+            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != ardorCurrencyAddressLoading; });
+            _this.flatten();
+        });
+    };
+    WalletComponent.prototype.loadFIMKAddresses = function (walletEntry) {
+        var _this = this;
+        var fimkCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'FIMK'; });
+        if (!fimkCurrencyAddressLoading)
+            return;
+        this.fimkCryptoService.refreshAdressBalances(fimkCurrencyAddressLoading.wallet).then(function () {
+            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
+                return;
+            var index = walletEntry.currencies.indexOf(fimkCurrencyAddressLoading);
+            fimkCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
+                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
+                if (address.inUse || wasCreated) {
+                    var fimkCurrencyBalance_1 = new CurrencyBalance('FIMK', 'FIM', address.address, address.privateKey);
+                    fimkCurrencyBalance_1.balance = address.balance ? address.balance + "" : "0";
+                    fimkCurrencyBalance_1.visible = walletEntry.expanded;
+                    fimkCurrencyBalance_1.inUse = wasCreated ? false : true;
+                    walletEntry.currencies.splice(index, 0, fimkCurrencyBalance_1);
+                    index++;
+                    if (address.tokensBalances) {
+                        address.tokensBalances.forEach(function (balance) {
+                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
+                            tokenBalance.balance = utils.commaFormat(balance.balance);
+                            tokenBalance.visible = walletEntry.expanded;
+                            fimkCurrencyBalance_1.tokens.push(tokenBalance);
+                        });
+                    }
+                }
+            });
+            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != fimkCurrencyAddressLoading; });
+            _this.flatten();
+        });
+    };
+    WalletComponent.prototype.loadEthereumAddresses = function (walletEntry) {
+        var _this = this;
+        var ethCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'Ethereum'; });
+        if (!ethCurrencyAddressLoading)
+            return;
+        this.lightwalletService.refreshAdressBalances(ethCurrencyAddressLoading.wallet).then(function () {
+            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
+                return;
+            var index = walletEntry.currencies.indexOf(ethCurrencyAddressLoading);
+            ethCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
+                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
+                if (address.inUse || wasCreated) {
+                    var ethCurrencyBalance_1 = new CurrencyBalance('Ethereum', 'ETH', address.address, address.privateKey);
+                    ethCurrencyBalance_1.balance = Number(address.balance + "").toFixed(18);
+                    ethCurrencyBalance_1.visible = walletEntry.expanded;
+                    ethCurrencyBalance_1.inUse = wasCreated ? false : true;
+                    walletEntry.currencies.splice(index, 0, ethCurrencyBalance_1);
+                    index++;
+                    if (address.tokensBalances) {
+                        address.tokensBalances.forEach(function (balance) {
+                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
+                            tokenBalance.balance = utils.commaFormat(balance.balance);
+                            tokenBalance.visible = walletEntry.expanded;
+                            ethCurrencyBalance_1.tokens.push(tokenBalance);
+                        });
+                    }
+                }
+            });
+            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != ethCurrencyAddressLoading; });
+            _this.flatten();
+        });
+    };
+    WalletComponent.prototype.loadBitcoinAddresses = function (walletEntry) {
+        var _this = this;
+        var btcCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'Bitcoin'; });
+        if (!btcCurrencyAddressLoading)
+            return;
+        this.bitcoreService.refreshAdressBalances(btcCurrencyAddressLoading.wallet).then(function () {
+            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
+                return;
+            var index = walletEntry.currencies.indexOf(btcCurrencyAddressLoading);
+            btcCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
+                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
+                if (address.inUse || wasCreated) {
+                    var btcCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', address.address, address.privateKey);
+                    btcCurrencyBalance.balance = address.balance + "";
+                    btcCurrencyBalance.visible = walletEntry.expanded;
+                    btcCurrencyBalance.inUse = wasCreated ? false : true;
+                    walletEntry.currencies.splice(index, 0, btcCurrencyBalance);
+                    index++;
+                }
+            });
+            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != btcCurrencyAddressLoading; });
+            _this.flatten();
+        });
+    };
+    WalletComponent.prototype.getAccountAssets = function (account) {
+        var _this = this;
+        var deferred = this.$q.defer();
+        this.heat.api.getAccountBalances(account, "0", 1, 0, 100).then(function (balances) {
+            var assetInfos = [];
+            var promises = [];
+            balances.forEach(function (balance) {
+                if (balance.id != '0') {
+                    promises.push(_this.assetInfo.getInfo(balance.id).then(function (info) {
+                        assetInfos.push(angular.extend(info, {
+                            userBalance: balance.virtualBalance
+                        }));
+                    }));
+                }
+            });
+            if (promises.length > 0) {
+                _this.$q.all(promises).then(function () {
+                    assetInfos.sort(function (a, b) {
+                        var textA = a.symbol.toUpperCase();
+                        var textB = b.symbol.toUpperCase();
+                        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
+                    });
+                    deferred.resolve(assetInfos);
+                }, deferred.reject);
+            }
+            else {
+                deferred.resolve([]);
+            }
+        }, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.importSeed = function ($event) {
+        var _this = this;
+        this.promptSecretPlusPassword($event).then(function (data) {
+            var account = heat.crypto.getAccountId(data.secretPhrase);
+            var key = {
+                account: account,
+                secretPhrase: data.secretPhrase,
+                pincode: data.password,
+                name: ''
+            };
+            _this.localKeyStore.add(key);
+            var message = "Seed was successfully imported to your wallet";
+            _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
+            heat.fullApplicationScopeReload();
+        });
+    };
+    WalletComponent.prototype.exportWallet = function () {
+        var exported = this.localKeyStore.export();
+        var encoded = this.walletFile.encode(exported);
+        var blob = new Blob([encoded], { type: "text/plain;charset=utf-8" });
+        saveAs(blob, 'heat.wallet');
+    };
+    WalletComponent.prototype.promptSecretPlusPassword = function ($event) {
+        var self = this;
+        function DialogController($scope, $mdDialog) {
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function () {
+                $mdDialog.hide({
+                    password: $scope['vm'].data.password1,
+                    secretPhrase: $scope['vm'].data.secretPhrase,
+                });
+            };
+            $scope['vm'].secretChanged = function () {
+                $scope['vm'].data.bip44Compatible = self.lightwalletService.validSeed($scope['vm'].data.secretPhrase);
+            };
+            $scope['vm'].data = {
+                password1: '',
+                password2: '',
+                secretPhrase: '',
+                bip44Compatible: false
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Import Seed/Private Key</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>Enter your Secret Seed and provide a Password (or Pin)</p>\n                <md-input-container flex>\n                  <label>HEAT Secret Phrase / Seed / Private Key</label>\n                  <textarea rows=\"2\" flex ng-model=\"vm.data.secretPhrase\" name=\"secretPhrase\" required ng-trim=\"false\" ng-change=\"vm.secretChanged() \"></textarea>\n                </md-input-container>\n                <md-input-container flex>\n                  <label>Password</label>\n                  <input type=\"password\" ng-model=\"vm.data.password1\" required name=\"password1\">\n                </md-input-container>\n                <md-input-container flex>\n                  <label>Password (confirm)</label>\n                  <input type=\"password\" ng-model=\"vm.data.password2\" required name=\"password2\">\n                </md-input-container>\n                <span>BIP44 compatible = <b>{{vm.data.bip44Compatible?'TRUE':'FALSE'}}</b></span>\n              </div>\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick()\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"dialogForm.$invalid || vm.data.password1 != vm.data.password2\" class=\"md-primary\"\n                  ng-click=\"vm.okButtonClick()\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.createEthAccount = function ($event) {
+        var walletEntries = this.walletEntries;
+        var self = this;
+        if (walletEntries.length == 0)
+            return;
+        function DialogController2($scope, $mdDialog) {
+            $scope['vm'].copySeed = function () {
+                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
+            };
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function ($event) {
+                var walletEntry = $scope['vm'].data.selectedWalletEntry;
+                var success = false;
+                if (walletEntry) {
+                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'Ethereum'; });
+                    success = node.createAddress(self);
+                    walletEntry.toggle(true);
+                }
+                $mdDialog.hide(null).then(function () {
+                    if (!success) {
+                        dialogs.alert($event, 'Unable to Create Address', 'Make sure you use the previous address first before you can create a new address');
+                    }
+                });
+            };
+            $scope['vm'].data = {
+                selectedWalletEntry: walletEntries[0],
+                selected: walletEntries[0].account,
+                walletEntries: walletEntries,
+                password: ''
+            };
+            $scope['vm'].selectedWalletEntryChanged = function () {
+                $scope['vm'].data.password = '';
+                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
+            };
+            $scope['vm'].passwordChanged = function () {
+                var password = $scope['vm'].data.password;
+                var account = $scope['vm'].data.selected;
+                var walletEntry = walletEntries.find(function (w) { return w.account == account; });
+                try {
+                    var key = self.localKeyStore.load(account, password);
+                    if (key) {
+                        self.localKeyStore.rememberPassword(walletEntry.account, password);
+                        walletEntry.pin = password;
+                        walletEntry.secretPhrase = key.secretPhrase;
+                        walletEntry.bip44Compatible = self.lightwalletService.validSeed(key.secretPhrase);
+                        walletEntry.unlocked = true;
+                        self.initWalletEntry(walletEntry);
+                        walletEntry.toggle(true);
+                    }
+                }
+                catch (e) { }
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController2,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create Ethereum Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new Ethereum address, please choose the master HEAT account you want to attach the new Ethereum address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Put In Password -->\n\n                <div flex layout=\"column\" ng-if=\"vm.data.selectedWalletEntry && !vm.data.selectedWalletEntry.unlocked\">\n                  <p>\n                    Please first unlock this account by entering your password below\n                  </p>\n                  <md-input-container flex >\n                    <label>Password</label>\n                    <input ng-model=\"vm.data.password\" ng-change=\"vm.passwordChanged()\">\n                  </md-input-container>\n                </div>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  Eth wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your Ethereum address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your Ethereum.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.createBtcAccount = function ($event) {
+        var walletEntries = this.walletEntries;
+        var self = this;
+        if (walletEntries.length == 0)
+            return;
+        function DialogController2($scope, $mdDialog) {
+            $scope['vm'].copySeed = function () {
+                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
+            };
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function ($event) {
+                var walletEntry = $scope['vm'].data.selectedWalletEntry;
+                var success = false;
+                if (walletEntry) {
+                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'Bitcoin'; });
+                    success = node.createBtcAddress(self);
+                    walletEntry.toggle(true);
+                }
+                $mdDialog.hide(null).then(function () {
+                    if (!success) {
+                        dialogs.alert($event, 'Unable to Create Address', 'Make sure you use the previous address first before you can create a new address');
+                    }
+                });
+            };
+            $scope['vm'].data = {
+                selectedWalletEntry: walletEntries[0],
+                selected: walletEntries[0].account,
+                walletEntries: walletEntries,
+                password: ''
+            };
+            $scope['vm'].selectedWalletEntryChanged = function () {
+                $scope['vm'].data.password = '';
+                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController2,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create Bitcoin Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new Bitcoin address, please choose the master HEAT account you want to attach the new Bitcoin address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  Btc wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your Bitcoin address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your Bitcoin.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.createFIMKAccount = function ($event) {
+        var walletEntries = this.walletEntries;
+        var self = this;
+        if (walletEntries.length == 0)
+            return;
+        function DialogController2($scope, $mdDialog) {
+            $scope['vm'].copySeed = function () {
+                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
+            };
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function ($event) {
+                var walletEntry = $scope['vm'].data.selectedWalletEntry;
+                var success = false;
+                if (walletEntry) {
+                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'FIMK'; });
+                    success = node.createFIMKAddress(self);
+                    walletEntry.toggle(true);
+                }
+                $mdDialog.hide(null).then(function () {
+                    if (!success) {
+                        dialogs.alert($event, 'Unable to Create Address', 'FIMK address already created for this account');
+                    }
+                });
+            };
+            $scope['vm'].data = {
+                selectedWalletEntry: walletEntries[0],
+                selected: walletEntries[0].account,
+                walletEntries: walletEntries,
+                password: ''
+            };
+            $scope['vm'].selectedWalletEntryChanged = function () {
+                $scope['vm'].data.password = '';
+                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController2,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create FIMK Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new FIMK address, please choose the master HEAT account you want to attach the new FIMK address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  FIMK wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your FIMK address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your FIMK.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.createNXTAccount = function ($event) {
+        var walletEntries = this.walletEntries;
+        var self = this;
+        if (walletEntries.length == 0)
+            return;
+        function DialogController2($scope, $mdDialog) {
+            $scope['vm'].copySeed = function () {
+                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
+            };
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function ($event) {
+                var walletEntry = $scope['vm'].data.selectedWalletEntry;
+                var success = false;
+                if (walletEntry) {
+                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'NXT'; });
+                    success = node.createNXTAddress(self);
+                    walletEntry.toggle(true);
+                }
+                $mdDialog.hide(null).then(function () {
+                    if (!success) {
+                        dialogs.alert($event, 'Unable to Create Address', 'NXT address already created for this account');
+                    }
+                });
+            };
+            $scope['vm'].data = {
+                selectedWalletEntry: walletEntries[0],
+                selected: walletEntries[0].account,
+                walletEntries: walletEntries,
+                password: ''
+            };
+            $scope['vm'].selectedWalletEntryChanged = function () {
+                $scope['vm'].data.password = '';
+                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController2,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create NXT Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new NXT address, please choose the master HEAT account you want to attach the new NXT address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  NXT wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your NXT address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your NXT.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent.prototype.createARDRAccount = function ($event) {
+        var walletEntries = this.walletEntries;
+        var self = this;
+        if (walletEntries.length == 0)
+            return;
+        function DialogController2($scope, $mdDialog) {
+            $scope['vm'].copySeed = function () {
+                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
+            };
+            $scope['vm'].cancelButtonClick = function () {
+                $mdDialog.cancel();
+            };
+            $scope['vm'].okButtonClick = function ($event) {
+                var walletEntry = $scope['vm'].data.selectedWalletEntry;
+                var success = false;
+                if (walletEntry) {
+                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'ARDOR'; });
+                    success = node.createARDRAddress(self);
+                    walletEntry.toggle(true);
+                }
+                $mdDialog.hide(null).then(function () {
+                    if (!success) {
+                        dialogs.alert($event, 'Unable to Create Address', 'ARDR address already created for this account');
+                    }
+                });
+            };
+            $scope['vm'].data = {
+                selectedWalletEntry: walletEntries[0],
+                selected: walletEntries[0].account,
+                walletEntries: walletEntries,
+                password: ''
+            };
+            $scope['vm'].selectedWalletEntryChanged = function () {
+                $scope['vm'].data.password = '';
+                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
+            };
+        }
+        var deferred = this.$q.defer();
+        this.$mdDialog.show({
+            controller: DialogController2,
+            parent: angular.element(document.body),
+            targetEvent: $event,
+            clickOutsideToClose: false,
+            controllerAs: 'vm',
+            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create ARDR Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new ARDR address, please choose the master HEAT account you want to attach the new ARDR address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  ARDR wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your ARDR address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your ARDR.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
+        }).then(deferred.resolve, deferred.reject);
+        return deferred.promise;
+    };
+    WalletComponent = __decorate([
+        RouteConfig('/wallet'),
+        Component({
+            selector: 'wallet',
+            template: "\n   <!--  layout-align=\"start center\" -->\n    <div layout=\"column\"  flex layout-padding>\n      <div layout=\"row\">\n\n        <!-- Open File input is hidden -->\n        <md-button class=\"md-primary md-raised\">\n          <md-tooltip md-direction=\"bottom\">Open wallet file, adds all contents</md-tooltip>\n          <label for=\"walet-input-file\">\n            Import File\n          </label>\n        </md-button>\n        <input type=\"file\" onchange=\"angular.element(this).scope().vm.pageAddFileInputChange(this.files)\" class=\"ng-hide\" id=\"walet-input-file\">\n\n        <!-- Adds a wallet seed (heat secret phrase or bip44 eth/btc seed) -->\n        <md-button class=\"md-primary md-raised\" ng-click=\"vm.importSeed()\" aria-label=\"Import Seed\">\n          <md-tooltip md-direction=\"bottom\">Import Seed</md-tooltip>\n          Import Seed/Private Key\n        </md-button>\n\n        <!-- Export Wallet to File -->\n        <md-button class=\"md-warn md-raised\" ng-click=\"vm.exportWallet()\" aria-label=\"Export Wallet\" ng-if=\"!vm.allLocked\">\n          <md-tooltip md-direction=\"bottom\">Export Wallet File</md-tooltip>\n          Export Wallet File\n        </md-button>\n\n        <md-select class=\"wallet-dropdown md-warn md-raised\" placeholder=\"Create Address\" ng-change=\"vm.createAccount($event)\" ng-model=\"vm.selectedChain\">\n          <md-option ng-repeat=\"entry in vm.chains\" value=\"{{entry.name}}\" ng-disabled=\"{{entry.disabled}}\">{{entry.name}}</md-option>\n        </md-select>\n      </div>\n\n      <div layout=\"column\" layout-fill  flex>\n        <div layout-fill layout=\"column\" class=\"wallet-entries\" flex>\n\n          <!-- Build a wallet structure that contains ::\n                - wallet entries\n                - per entry currency balances\n                - per currency token balances  -->\n\n          <md-list layout-fill layout=\"column\" flex>\n            <md-list-item ng-repeat=\"entry in vm.entries\" ng-if=\"entry.visible && !entry.hidden\">\n\n              <!-- Wallet entry -->\n              <div ng-if=\"entry.isWalletEntry\" layout=\"row\" class=\"wallet-entry\" flex>\n                <!--\n                <md-checkbox ng-model=\"entry.selected\">\n                  <md-tooltip md-direction=\"bottom\">\n                    Check this to include in wallet export\n                  </md-tooltip>\n                </md-checkbox>\n                -->\n                <md-button class=\"md-icon-button left\" ng-click=\"entry.toggle()\">\n                  <md-icon md-font-library=\"material-icons\">{{entry.expanded?'expand_less':'expand_more'}}</md-icon>\n                </md-button>\n\n                <div flex ng-if=\"entry.secretPhrase\" class=\"identifier\"><a ng-click=\"entry.toggle()\">{{entry.identifier}}</a></div>\n                <div flex ng-if=\"!entry.secretPhrase\" class=\"identifier\">{{entry.identifier}}</div>\n                <md-button ng-if=\"!entry.unlocked\" ng-click=\"vm.unlock($event, entry)\">Sign in</md-button>\n\n                <md-menu md-position-mode=\"target-right target\" md-offset=\"34px 34px\" ng-if=\"entry.unlocked\">\n                  <md-button aria-label=\"user menu\" class=\"md-icon-button right\" ng-click=\"$mdOpenMenu($event)\" md-menu-origin >\n                    <md-icon md-font-library=\"material-icons\">more_horiz</md-icon>\n                  </md-button>\n                  <md-menu-content width=\"4\">\n                    <md-menu-item>\n                      <md-button aria-label=\"explorer\" ng-click=\"entry.showSecretPhrase()\">\n                        <md-icon md-font-library=\"material-icons\">file_copy</md-icon>\n                        Show private key\n                      </md-button>\n                    </md-menu-item>\n                    <md-menu-item>\n                      <md-button aria-label=\"explorer\" ng-click=\"vm.remove($event, entry)\">\n                        <md-icon md-font-library=\"material-icons\">delete_forever</md-icon>\n                        Remove\n                      </md-button>\n                    </md-menu-item>\n                  </md-menu-content>\n                </md-menu>\n              </div>\n\n              <!-- Currency Balance -->\n              <div ng-if=\"entry.isCurrencyBalance\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex><a ng-click=\"entry.unlock()\">{{entry.address}}</a></div>&nbsp;\n                <div class=\"balance\">{{entry.balance}}&nbsp;{{entry.symbol}}</div>\n              </div>\n\n              <!-- Currency Address Loading -->\n              <div ng-if=\"entry.isCurrencyAddressLoading\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex>Loading ..</div>\n              </div>\n\n              <!-- Currency Address Create -->\n              <div ng-if=\"entry.isCurrencyAddressCreate\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex></div>\n                <md-button ng-click=\"entry.createAddress()\">Create New</md-button>\n              </div>\n\n              <!-- Token Balance -->\n              <div ng-if=\"entry.isTokenBalance\" layout=\"row\" class=\"token-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex>{{entry.address}}</div>&nbsp;\n                <div class=\"balance\">{{entry.balance}}&nbsp;{{entry.symbol}}</div>\n              </div>\n\n            </md-list-item>\n          </md-list>\n        </div>\n      </div>\n    </div>\n  "
+        }),
+        Inject('$scope', '$q', 'localKeyStore', 'walletFile', '$window', 'lightwalletService', 'heat', 'assetInfo', 'ethplorer', '$mdToast', '$mdDialog', 'clipboard', 'user', 'bitcoreService', 'fimkCryptoService', 'nxtCryptoService', 'ardorCryptoService', 'nxtBlockExplorerService', 'ardorBlockExplorerService'),
+        __metadata("design:paramtypes", [Object, Function, LocalKeyStoreService,
+            WalletFileService, Object, LightwalletService,
+            HeatService,
+            AssetInfoService,
+            EthplorerService, Object, Object, ClipboardService,
+            UserService,
+            BitcoreService,
+            FIMKCryptoService,
+            NXTCryptoService,
+            ARDORCryptoService,
+            NxtBlockExplorerService,
+            ArdorBlockExplorerService])
+    ], WalletComponent);
+    return WalletComponent;
+}());
 var OrdersProviderFactory = (function () {
     function OrdersProviderFactory(heat, $q) {
         this.heat = heat;
@@ -15999,1063 +17056,6 @@ var TraderComponent = (function () {
     ], TraderComponent);
     return TraderComponent;
 }());
-var TokenBalance = (function () {
-    function TokenBalance(name, symbol, address) {
-        this.name = name;
-        this.symbol = symbol;
-        this.address = address;
-        this.isTokenBalance = true;
-        this.visible = false;
-    }
-    return TokenBalance;
-}());
-var CurrencyBalance = (function () {
-    function CurrencyBalance(name, symbol, address, secretPhrase) {
-        this.name = name;
-        this.symbol = symbol;
-        this.address = address;
-        this.secretPhrase = secretPhrase;
-        this.isCurrencyBalance = true;
-        this.inUse = false;
-        this.tokens = [];
-        this.visible = false;
-    }
-    CurrencyBalance.prototype.unlock = function (noPathChange) {
-        var user = heat.$inject.get('user');
-        var $location = heat.$inject.get('$location');
-        var lightwalletService = heat.$inject.get('lightwalletService');
-        var bip44Compatible = lightwalletService.validSeed(this.secretPhrase);
-        var currency = null;
-        if (this.name == 'Ethereum') {
-            currency = new ETHCurrency(this.secretPhrase, this.address);
-        }
-        else if (this.name == 'Bitcoin') {
-            currency = new BTCCurrency(this.secretPhrase, this.address);
-        }
-        else if (this.name == 'FIMK') {
-            currency = new FIMKCurrency(this.secretPhrase, this.address);
-        }
-        else if (this.name == 'NXT') {
-            currency = new NXTCurrency(this.secretPhrase, this.address);
-        }
-        else if (this.name == 'ARDOR') {
-            currency = new ARDRCurrency(this.secretPhrase, this.address);
-        }
-        else {
-            currency = new HEATCurrency(this.secretPhrase, this.address);
-        }
-        user.unlock(this.secretPhrase, null, bip44Compatible, currency).then(function () {
-            if (!noPathChange) {
-                $location.path(currency.homePath);
-                heat.fullApplicationScopeReload();
-            }
-        });
-    };
-    return CurrencyBalance;
-}());
-var CurrencyAddressLoading = (function () {
-    function CurrencyAddressLoading(name) {
-        this.name = name;
-        this.isCurrencyAddressLoading = true;
-        this.visible = false;
-    }
-    return CurrencyAddressLoading;
-}());
-var CurrencyAddressCreate = (function () {
-    function CurrencyAddressCreate(name, wallet) {
-        this.name = name;
-        this.wallet = wallet;
-        this.isCurrencyAddressCreate = true;
-        this.visible = false;
-        this.hidden = true;
-    }
-    CurrencyAddressCreate.prototype.createAddress = function (component) {
-        var _this = this;
-        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
-        if (currencyBalances.length == 0) {
-            var nextAddress = this.wallet.addresses[0];
-            var newCurrencyBalance = new CurrencyBalance('Ethereum', 'ETH', nextAddress.address, nextAddress.privateKey);
-            component.rememberAdressCreated(this.parent.account, nextAddress.address);
-            newCurrencyBalance.visible = this.parent.expanded;
-            this.parent.currencies.push(newCurrencyBalance);
-            this.flatten();
-            return true;
-        }
-        var lastAddress = currencyBalances[currencyBalances.length - 1]['address'];
-        if (!currencyBalances[currencyBalances.length - 1]['inUse']) {
-            return false;
-        }
-        for (var i = 0; i < this.wallet.addresses.length; i++) {
-            if (this.wallet.addresses[i].address == lastAddress) {
-                if (i == this.wallet.addresses.length - 1)
-                    return;
-                var nextAddress = this.wallet.addresses[i + 1];
-                var newCurrencyBalance = new CurrencyBalance('Ethereum', 'ETH', nextAddress.address, nextAddress.privateKey);
-                component.rememberAdressCreated(this.parent.account, nextAddress.address);
-                newCurrencyBalance.visible = this.parent.expanded;
-                var index = this.parent.currencies.indexOf(currencyBalances[currencyBalances.length - 1]) + 1;
-                this.parent.currencies.splice(index, 0, newCurrencyBalance);
-                this.flatten();
-                return true;
-            }
-        }
-        return false;
-    };
-    CurrencyAddressCreate.prototype.createBtcAddress = function (component) {
-        var _this = this;
-        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
-        if (currencyBalances.length == 0) {
-            var nextAddress = this.wallet.addresses[0];
-            var newCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', nextAddress.address, nextAddress.privateKey);
-            component.rememberAdressCreated(this.parent.account, nextAddress.address);
-            newCurrencyBalance.visible = this.parent.expanded;
-            this.parent.currencies.push(newCurrencyBalance);
-            this.flatten();
-            return true;
-        }
-        var lastAddress = currencyBalances[currencyBalances.length - 1]['address'];
-        if (!currencyBalances[currencyBalances.length - 1]['inUse']) {
-            return false;
-        }
-        for (var i = 0; i < this.wallet.addresses.length; i++) {
-            if (this.wallet.addresses[i].address == lastAddress) {
-                if (i == this.wallet.addresses.length - 1)
-                    return;
-                var nextAddress = this.wallet.addresses[i + 1];
-                var newCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', nextAddress.address, nextAddress.privateKey);
-                component.rememberAdressCreated(this.parent.account, nextAddress.address);
-                newCurrencyBalance.visible = this.parent.expanded;
-                var index = this.parent.currencies.indexOf(currencyBalances[currencyBalances.length - 1]) + 1;
-                this.parent.currencies.splice(index, 0, newCurrencyBalance);
-                this.flatten();
-                return true;
-            }
-        }
-        return false;
-    };
-    CurrencyAddressCreate.prototype.createFIMKAddress = function (component) {
-        var _this = this;
-        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
-        if (currencyBalances.length == 0) {
-            var nextAddress = this.wallet.addresses[0];
-            var newCurrencyBalance = new CurrencyBalance('FIMK', 'FIM', nextAddress.address, nextAddress.privateKey);
-            component.rememberAdressCreated(this.parent.account, nextAddress.address);
-            newCurrencyBalance.visible = this.parent.expanded;
-            this.parent.currencies.push(newCurrencyBalance);
-            this.flatten();
-            return true;
-        }
-        return false;
-    };
-    CurrencyAddressCreate.prototype.createNXTAddress = function (component) {
-        var _this = this;
-        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
-        if (currencyBalances.length == 0) {
-            var nextAddress = this.wallet.addresses[0];
-            var newCurrencyBalance = new CurrencyBalance('NXT', 'NXT', nextAddress.address, nextAddress.privateKey);
-            component.rememberAdressCreated(this.parent.account, nextAddress.address);
-            newCurrencyBalance.visible = this.parent.expanded;
-            this.parent.currencies.push(newCurrencyBalance);
-            this.flatten();
-            return true;
-        }
-        return false;
-    };
-    CurrencyAddressCreate.prototype.createARDRAddress = function (component) {
-        var _this = this;
-        var currencyBalances = this.parent.currencies.filter(function (c) { return c['isCurrencyBalance'] && c.name == _this.name; });
-        if (currencyBalances.length == 0) {
-            var nextAddress = this.wallet.addresses[0];
-            var newCurrencyBalance = new CurrencyBalance('ARDOR', 'ARDR', nextAddress.address, nextAddress.privateKey);
-            component.rememberAdressCreated(this.parent.account, nextAddress.address);
-            newCurrencyBalance.visible = this.parent.expanded;
-            this.parent.currencies.push(newCurrencyBalance);
-            this.flatten();
-            return true;
-        }
-        return false;
-    };
-    return CurrencyAddressCreate;
-}());
-var WalletEntry = (function () {
-    function WalletEntry(account, name, component) {
-        this.account = account;
-        this.name = name;
-        this.component = component;
-        this.isWalletEntry = true;
-        this.selected = true;
-        this.currencies = [];
-        this.unlocked = false;
-        this.visible = true;
-        this.expanded = false;
-        this.btcWalletAddressIndex = 0;
-        this.identifier = name ? name + " | " + account : account;
-    }
-    WalletEntry.prototype.toggle = function (forceVisible) {
-        var _this = this;
-        this.expanded = forceVisible || !this.expanded;
-        this.currencies.forEach(function (curr) {
-            var currency = curr;
-            currency.visible = _this.expanded;
-            if (currency.tokens) {
-                currency.tokens.forEach(function (token) {
-                    token.visible = _this.expanded;
-                });
-            }
-        });
-        if (this.expanded) {
-            this.component.loadEthereumAddresses(this);
-            this.component.loadBitcoinAddresses(this);
-            this.component.loadFIMKAddresses(this);
-            this.component.loadNXTAddresses(this);
-            this.component.loadARDORAddresses(this);
-        }
-    };
-    WalletEntry.prototype.showSecretPhrase = function () {
-        var panel = heat.$inject.get('panel');
-        panel.show("\n      <div layout=\"column\" flex class=\"toolbar-copy-passphrase\">\n        <md-input-container flex>\n          <textarea rows=\"2\" flex ng-bind=\"vm.secretPhrase\" readonly ng-trim=\"false\"></textarea>\n        </md-input-container>\n      </div>\n    ", {
-            secretPhrase: this.secretPhrase
-        });
-    };
-    return WalletEntry;
-}());
-var WalletComponent = (function () {
-    function WalletComponent($scope, $q, localKeyStore, walletFile, $window, lightwalletService, heat, assetInfo, ethplorer, $mdToast, $mdDialog, clipboard, user, bitcoreService, fimkCryptoService, nxtCryptoService, ardorCryptoService, nxtBlockExplorerService, ardorBlockExplorerService) {
-        var _this = this;
-        this.$scope = $scope;
-        this.$q = $q;
-        this.localKeyStore = localKeyStore;
-        this.walletFile = walletFile;
-        this.$window = $window;
-        this.lightwalletService = lightwalletService;
-        this.heat = heat;
-        this.assetInfo = assetInfo;
-        this.ethplorer = ethplorer;
-        this.$mdToast = $mdToast;
-        this.$mdDialog = $mdDialog;
-        this.clipboard = clipboard;
-        this.user = user;
-        this.bitcoreService = bitcoreService;
-        this.fimkCryptoService = fimkCryptoService;
-        this.nxtCryptoService = nxtCryptoService;
-        this.ardorCryptoService = ardorCryptoService;
-        this.nxtBlockExplorerService = nxtBlockExplorerService;
-        this.ardorBlockExplorerService = ardorBlockExplorerService;
-        this.selectAll = true;
-        this.allLocked = true;
-        this.entries = [];
-        this.walletEntries = [];
-        this.createdAddresses = {};
-        this.chains = [{ name: 'ETH', disabled: false }, { name: 'BTC', disabled: false }, { name: 'FIMK', disabled: false }, { name: 'NXT', disabled: true }, { name: 'ARDR', disabled: true }];
-        this.selectedChain = '';
-        nxtBlockExplorerService.getBlockchainStatus().then(function () {
-            var nxtChain = { name: 'NXT', disabled: false };
-            var index = _this.chains.findIndex(function (entry) { return entry.name === nxtChain.name; });
-            _this.chains[index] = nxtChain;
-        });
-        ardorBlockExplorerService.getBlockchainStatus().then(function () {
-            var ardorChain = { name: 'ARDR', disabled: false };
-            var index = _this.chains.findIndex(function (entry) { return entry.name === ardorChain.name; });
-            _this.chains[index] = ardorChain;
-        });
-        this.initLocalKeyStore();
-        this.initCreatedAddresses();
-    }
-    WalletComponent.prototype.createAccount = function ($event) {
-        if (this.$scope['vm'].selectedChain === 'ETH') {
-            this.createEthAccount($event);
-        }
-        else if (this.$scope['vm'].selectedChain === 'BTC') {
-            this.createBtcAccount($event);
-        }
-        else if (this.$scope['vm'].selectedChain === 'FIMK') {
-            this.createFIMKAccount($event);
-        }
-        else if (this.$scope['vm'].selectedChain === 'NXT') {
-            this.createNXTAccount($event);
-        }
-        else if (this.$scope['vm'].selectedChain === 'ARDR') {
-            this.createARDRAccount($event);
-        }
-    };
-    WalletComponent.prototype.initLocalKeyStore = function () {
-        var _this = this;
-        this.entries = [];
-        this.walletEntries = [];
-        this.localKeyStore.list().map(function (account) {
-            var name = _this.localKeyStore.keyName(account);
-            var walletEntry = new WalletEntry(account, name, _this);
-            _this.walletEntries.push(walletEntry);
-        });
-        this.walletEntries.forEach(function (walletEntry) {
-            var password = _this.localKeyStore.getPasswordForAccount(walletEntry.account);
-            if (password) {
-                try {
-                    var key = _this.localKeyStore.load(walletEntry.account, password);
-                    if (key) {
-                        walletEntry.secretPhrase = key.secretPhrase;
-                        walletEntry.bip44Compatible = _this.lightwalletService.validSeed(key.secretPhrase);
-                        walletEntry.unlocked = true;
-                        walletEntry.pin = password;
-                        _this.initWalletEntry(walletEntry);
-                    }
-                }
-                catch (e) {
-                    console.log(e);
-                }
-            }
-        });
-        this.flatten();
-    };
-    WalletComponent.prototype.initCreatedAddresses = function () {
-        for (var i = 0; i < window.localStorage.length; i++) {
-            var key = window.localStorage.key(i);
-            var data = key.match(/eth-address-created:(.+):(.+)/);
-            if (data) {
-                var acc = data[1], addr = data[2];
-                this.createdAddresses[acc] = this.createdAddresses[acc] || [];
-                this.createdAddresses[acc].push(addr);
-            }
-        }
-    };
-    WalletComponent.prototype.rememberAdressCreated = function (account, ethAddress) {
-        this.createdAddresses[account] = this.createdAddresses[account] || [];
-        this.createdAddresses[account].push(ethAddress);
-        window.localStorage.setItem("eth-address-created:" + account + ":" + ethAddress, "1");
-    };
-    WalletComponent.prototype.flatten = function () {
-        var _this = this;
-        this.$scope.$evalAsync(function () {
-            _this.entries = [];
-            _this.walletEntries.forEach(function (walletEntry) {
-                _this.entries.push(walletEntry);
-                walletEntry.currencies.forEach(function (curr) {
-                    var currencyBalance = curr;
-                    _this.entries.push(currencyBalance);
-                    if (currencyBalance.tokens) {
-                        currencyBalance.tokens.forEach(function (tokenBalance) {
-                            _this.entries.push(tokenBalance);
-                        });
-                    }
-                });
-            });
-        });
-    };
-    WalletComponent.prototype.pageAddAddSecretPhrase = function ($event) {
-        var _this = this;
-        this.promptSecretPlusPassword($event).then(function (data) {
-            var account = heat.crypto.getAccountId(data.secretPhrase);
-            var key = {
-                account: account,
-                secretPhrase: data.secretPhrase,
-                pincode: data.password,
-                name: ''
-            };
-            _this.localKeyStore.add(key);
-            _this.$scope.$evalAsync(function () {
-                _this.initLocalKeyStore();
-            });
-        });
-    };
-    WalletComponent.prototype.pageAddFileInputChange = function (files) {
-        var _this = this;
-        if (files && files[0]) {
-            var reader_2 = new FileReader();
-            reader_2.onload = function () {
-                _this.$scope.$evalAsync(function () {
-                    var fileContents = reader_2.result;
-                    var wallet = _this.walletFile.createFromText(fileContents);
-                    if (wallet) {
-                        var addedKeys = _this.localKeyStore.import(wallet);
-                        _this.$scope.$evalAsync(function () {
-                            _this.initLocalKeyStore();
-                        });
-                        var message = "Imported " + addedKeys.length + " keys into this device";
-                        _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
-                    }
-                });
-            };
-            reader_2.readAsText(files[0]);
-        }
-    };
-    WalletComponent.prototype.remove = function ($event, entry) {
-        var _this = this;
-        dialogs.prompt($event, 'Remove Wallet Entry', "This completely removes the wallet entry from your device.\n       Please enter your Password (or Pin Code) to confirm you wish to remove this entry", '').then(function (pin) {
-            if (pin == entry.pin) {
-                _this.localKeyStore.remove(entry.account);
-                _this.initLocalKeyStore();
-            }
-        });
-    };
-    WalletComponent.prototype.unlock = function ($event, selectedWalletEntry) {
-        var _this = this;
-        dialogs.prompt($event, 'Enter Password (or Pin)', 'Please enter your Password (or Pin Code) to unlock', '').then(function (pin) {
-            var count = 0;
-            _this.walletEntries.forEach(function (walletEntry) {
-                if (!walletEntry.secretPhrase) {
-                    var key = _this.localKeyStore.load(walletEntry.account, pin);
-                    if (key) {
-                        count += 1;
-                        _this.localKeyStore.rememberPassword(walletEntry.account, pin);
-                        walletEntry.pin = pin;
-                        walletEntry.secretPhrase = key.secretPhrase;
-                        walletEntry.bip44Compatible = _this.lightwalletService.validSeed(key.secretPhrase);
-                        walletEntry.unlocked = true;
-                        _this.initWalletEntry(walletEntry);
-                    }
-                }
-            });
-            var message = "Unlocked " + (count ? count : 'NO') + " entries";
-            _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
-            selectedWalletEntry.toggle(true);
-            if (!_this.user.unlocked) {
-                if (selectedWalletEntry.unlocked) {
-                    for (var i = 0; i < selectedWalletEntry.currencies.length; i++) {
-                        var balance = selectedWalletEntry.currencies[i];
-                        if (balance.isCurrencyBalance) {
-                            balance.unlock(true);
-                            return;
-                        }
-                    }
-                }
-                for (var i = 0; i < _this.entries.length; i++) {
-                    var balance = selectedWalletEntry.currencies[i];
-                    if (balance.isCurrencyBalance) {
-                        balance.unlock(true);
-                        return;
-                    }
-                }
-            }
-        });
-    };
-    WalletComponent.prototype.initWalletEntry = function (walletEntry) {
-        var _this = this;
-        this.allLocked = false;
-        var heatAccount = heat.crypto.getAccountIdFromPublicKey(heat.crypto.secretPhraseToPublicKey(walletEntry.secretPhrase));
-        var heatCurrencyBalance = new CurrencyBalance('HEAT', 'HEAT', heatAccount, walletEntry.secretPhrase);
-        heatCurrencyBalance.visible = walletEntry.expanded;
-        walletEntry.currencies.push(heatCurrencyBalance);
-        this.flatten();
-        this.heat.api.getAccountByNumericId(heatAccount).then(function (account) {
-            _this.$scope.$evalAsync(function () {
-                var balanceUnconfirmed = utils.formatQNT(account.unconfirmedBalance, 8);
-                heatCurrencyBalance.balance = balanceUnconfirmed;
-            });
-            _this.getAccountAssets(heatAccount).then(function (assetInfos) {
-                heatCurrencyBalance.tokens = [];
-                assetInfos.forEach(function (assetInfo) {
-                    var tokenBalance = new TokenBalance(assetInfo.name, assetInfo.symbol, assetInfo.id);
-                    tokenBalance.balance = utils.formatQNT(assetInfo.userBalance, 8);
-                    tokenBalance.visible = walletEntry.expanded;
-                    heatCurrencyBalance.tokens.push(tokenBalance);
-                });
-                _this.flatten();
-            });
-        }, function () {
-            _this.$scope.$evalAsync(function () {
-                heatCurrencyBalance.balance = "Address is unused";
-                heatCurrencyBalance.symbol = '';
-            });
-        });
-        this.bitcoreService.unlock(walletEntry.secretPhrase).then(function (wallet) {
-            if (wallet !== undefined) {
-                var btcCurrencyAddressLoading = new CurrencyAddressLoading('Bitcoin');
-                btcCurrencyAddressLoading.visible = walletEntry.expanded;
-                btcCurrencyAddressLoading.wallet = wallet;
-                walletEntry.currencies.push(btcCurrencyAddressLoading);
-                var btcCurrencyAddressCreate = new CurrencyAddressCreate('Bitcoin', wallet);
-                btcCurrencyAddressCreate.visible = walletEntry.expanded;
-                btcCurrencyAddressCreate.parent = walletEntry;
-                btcCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
-                walletEntry.currencies.push(btcCurrencyAddressCreate);
-                _this.flatten();
-                if (walletEntry.expanded) {
-                    _this.loadBitcoinAddresses(walletEntry);
-                }
-            }
-        });
-        this.lightwalletService.unlock(walletEntry.secretPhrase, "").then(function (wallet) {
-            var ethCurrencyAddressLoading = new CurrencyAddressLoading('Ethereum');
-            ethCurrencyAddressLoading.visible = walletEntry.expanded;
-            ethCurrencyAddressLoading.wallet = wallet;
-            walletEntry.currencies.push(ethCurrencyAddressLoading);
-            var ethCurrencyAddressCreate = new CurrencyAddressCreate('Ethereum', wallet);
-            ethCurrencyAddressCreate.visible = walletEntry.expanded;
-            ethCurrencyAddressCreate.parent = walletEntry;
-            ethCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
-            walletEntry.currencies.push(ethCurrencyAddressCreate);
-            _this.flatten();
-            if (walletEntry.expanded) {
-                _this.loadEthereumAddresses(walletEntry);
-            }
-        });
-        this.fimkCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
-            _this.fimkCryptoService.getSocket().then(function () {
-                var fimkCurrencyAddressLoading = new CurrencyAddressLoading('FIMK');
-                fimkCurrencyAddressLoading.visible = walletEntry.expanded;
-                fimkCurrencyAddressLoading.wallet = wallet;
-                walletEntry.currencies.push(fimkCurrencyAddressLoading);
-            });
-            var fimkCurrencyAddressCreate = new CurrencyAddressCreate('FIMK', wallet);
-            fimkCurrencyAddressCreate.visible = walletEntry.expanded;
-            fimkCurrencyAddressCreate.parent = walletEntry;
-            fimkCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
-            walletEntry.currencies.push(fimkCurrencyAddressCreate);
-            if (walletEntry.expanded) {
-                _this.loadFIMKAddresses(walletEntry);
-            }
-        });
-        this.nxtCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
-            var nxtCurrencyAddressCreate = new CurrencyAddressCreate('NXT', wallet);
-            nxtCurrencyAddressCreate.visible = walletEntry.expanded;
-            nxtCurrencyAddressCreate.parent = walletEntry;
-            nxtCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
-            walletEntry.currencies.push(nxtCurrencyAddressCreate);
-            _this.nxtBlockExplorerService.getBlockchainStatus().then(function () {
-                var nxtCurrencyAddressLoading = new CurrencyAddressLoading('NXT');
-                nxtCurrencyAddressLoading.visible = walletEntry.expanded;
-                nxtCurrencyAddressLoading.wallet = wallet;
-                walletEntry.currencies.push(nxtCurrencyAddressLoading);
-                if (walletEntry.expanded) {
-                    _this.loadNXTAddresses(walletEntry);
-                }
-            });
-        });
-        this.ardorCryptoService.unlock(walletEntry.secretPhrase).then(function (wallet) {
-            var ardorCurrencyAddressCreate = new CurrencyAddressCreate('ARDOR', wallet);
-            ardorCurrencyAddressCreate.visible = walletEntry.expanded;
-            ardorCurrencyAddressCreate.parent = walletEntry;
-            ardorCurrencyAddressCreate.flatten = _this.flatten.bind(_this);
-            walletEntry.currencies.push(ardorCurrencyAddressCreate);
-            _this.ardorBlockExplorerService.getBlockchainStatus().then(function () {
-                var ardorCurrencyAddressLoading = new CurrencyAddressLoading('ARDOR');
-                ardorCurrencyAddressLoading.visible = walletEntry.expanded;
-                ardorCurrencyAddressLoading.wallet = wallet;
-                walletEntry.currencies.push(ardorCurrencyAddressLoading);
-                if (walletEntry.expanded) {
-                    _this.loadARDORAddresses(walletEntry);
-                }
-            });
-        });
-    };
-    WalletComponent.prototype.loadNXTAddresses = function (walletEntry) {
-        var _this = this;
-        var nxtCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'NXT'; });
-        if (!nxtCurrencyAddressLoading)
-            return;
-        this.nxtCryptoService.refreshAdressBalances(nxtCurrencyAddressLoading.wallet).then(function () {
-            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
-                return;
-            var index = walletEntry.currencies.indexOf(nxtCurrencyAddressLoading);
-            nxtCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
-                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
-                if (address.inUse || wasCreated) {
-                    var nxtCurrencyBalance_1 = new CurrencyBalance('NXT', 'NXT', address.address, address.privateKey);
-                    nxtCurrencyBalance_1.balance = address.balance ? address.balance + "" : "0";
-                    nxtCurrencyBalance_1.visible = walletEntry.expanded;
-                    nxtCurrencyBalance_1.inUse = wasCreated ? false : true;
-                    walletEntry.currencies.splice(index, 0, nxtCurrencyBalance_1);
-                    index++;
-                    if (address.tokensBalances) {
-                        address.tokensBalances.forEach(function (balance) {
-                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
-                            tokenBalance.balance = utils.commaFormat(balance.balance);
-                            tokenBalance.visible = walletEntry.expanded;
-                            nxtCurrencyBalance_1.tokens.push(tokenBalance);
-                        });
-                    }
-                }
-            });
-            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != nxtCurrencyAddressLoading; });
-            _this.flatten();
-        });
-    };
-    WalletComponent.prototype.loadARDORAddresses = function (walletEntry) {
-        var _this = this;
-        var ardorCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'ARDOR'; });
-        if (!ardorCurrencyAddressLoading)
-            return;
-        this.ardorCryptoService.refreshAdressBalances(ardorCurrencyAddressLoading.wallet).then(function () {
-            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
-                return;
-            var index = walletEntry.currencies.indexOf(ardorCurrencyAddressLoading);
-            ardorCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
-                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
-                if (address.inUse || wasCreated) {
-                    var nxtCurrencyBalance_2 = new CurrencyBalance('ARDOR', 'ARDR', address.address, address.privateKey);
-                    nxtCurrencyBalance_2.balance = address.balance ? address.balance + "" : "0";
-                    nxtCurrencyBalance_2.visible = walletEntry.expanded;
-                    nxtCurrencyBalance_2.inUse = wasCreated ? false : true;
-                    walletEntry.currencies.splice(index, 0, nxtCurrencyBalance_2);
-                    index++;
-                    if (address.tokensBalances) {
-                        address.tokensBalances.forEach(function (balance) {
-                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
-                            tokenBalance.balance = utils.commaFormat(balance.balance);
-                            tokenBalance.visible = walletEntry.expanded;
-                            nxtCurrencyBalance_2.tokens.push(tokenBalance);
-                        });
-                    }
-                }
-            });
-            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != ardorCurrencyAddressLoading; });
-            _this.flatten();
-        });
-    };
-    WalletComponent.prototype.loadFIMKAddresses = function (walletEntry) {
-        var _this = this;
-        var fimkCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'FIMK'; });
-        if (!fimkCurrencyAddressLoading)
-            return;
-        this.fimkCryptoService.refreshAdressBalances(fimkCurrencyAddressLoading.wallet).then(function () {
-            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
-                return;
-            var index = walletEntry.currencies.indexOf(fimkCurrencyAddressLoading);
-            fimkCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
-                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
-                if (address.inUse || wasCreated) {
-                    var fimkCurrencyBalance_1 = new CurrencyBalance('FIMK', 'FIM', address.address, address.privateKey);
-                    fimkCurrencyBalance_1.balance = address.balance ? address.balance + "" : "0";
-                    fimkCurrencyBalance_1.visible = walletEntry.expanded;
-                    fimkCurrencyBalance_1.inUse = wasCreated ? false : true;
-                    walletEntry.currencies.splice(index, 0, fimkCurrencyBalance_1);
-                    index++;
-                    if (address.tokensBalances) {
-                        address.tokensBalances.forEach(function (balance) {
-                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
-                            tokenBalance.balance = utils.commaFormat(balance.balance);
-                            tokenBalance.visible = walletEntry.expanded;
-                            fimkCurrencyBalance_1.tokens.push(tokenBalance);
-                        });
-                    }
-                }
-            });
-            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != fimkCurrencyAddressLoading; });
-            _this.flatten();
-        });
-    };
-    WalletComponent.prototype.loadEthereumAddresses = function (walletEntry) {
-        var _this = this;
-        var ethCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'Ethereum'; });
-        if (!ethCurrencyAddressLoading)
-            return;
-        this.lightwalletService.refreshAdressBalances(ethCurrencyAddressLoading.wallet).then(function () {
-            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
-                return;
-            var index = walletEntry.currencies.indexOf(ethCurrencyAddressLoading);
-            ethCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
-                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
-                if (address.inUse || wasCreated) {
-                    var ethCurrencyBalance_1 = new CurrencyBalance('Ethereum', 'ETH', address.address, address.privateKey);
-                    ethCurrencyBalance_1.balance = Number(address.balance + "").toFixed(18);
-                    ethCurrencyBalance_1.visible = walletEntry.expanded;
-                    ethCurrencyBalance_1.inUse = wasCreated ? false : true;
-                    walletEntry.currencies.splice(index, 0, ethCurrencyBalance_1);
-                    index++;
-                    if (address.tokensBalances) {
-                        address.tokensBalances.forEach(function (balance) {
-                            var tokenBalance = new TokenBalance(balance.name, balance.symbol, balance.address);
-                            tokenBalance.balance = utils.commaFormat(balance.balance);
-                            tokenBalance.visible = walletEntry.expanded;
-                            ethCurrencyBalance_1.tokens.push(tokenBalance);
-                        });
-                    }
-                }
-            });
-            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != ethCurrencyAddressLoading; });
-            _this.flatten();
-        });
-    };
-    WalletComponent.prototype.loadBitcoinAddresses = function (walletEntry) {
-        var _this = this;
-        var btcCurrencyAddressLoading = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressLoading && c.name == 'Bitcoin'; });
-        if (!btcCurrencyAddressLoading)
-            return;
-        this.bitcoreService.refreshAdressBalances(btcCurrencyAddressLoading.wallet).then(function () {
-            if (!walletEntry.currencies.find(function (c) { return c['isCurrencyAddressLoading']; }))
-                return;
-            var index = walletEntry.currencies.indexOf(btcCurrencyAddressLoading);
-            btcCurrencyAddressLoading.wallet.addresses.forEach(function (address) {
-                var wasCreated = (_this.createdAddresses[walletEntry.account] || []).indexOf(address.address) != -1;
-                if (address.inUse || wasCreated) {
-                    var btcCurrencyBalance = new CurrencyBalance('Bitcoin', 'BTC', address.address, address.privateKey);
-                    btcCurrencyBalance.balance = address.balance + "";
-                    btcCurrencyBalance.visible = walletEntry.expanded;
-                    btcCurrencyBalance.inUse = wasCreated ? false : true;
-                    walletEntry.currencies.splice(index, 0, btcCurrencyBalance);
-                    index++;
-                }
-            });
-            walletEntry.currencies = walletEntry.currencies.filter(function (c) { return c != btcCurrencyAddressLoading; });
-            _this.flatten();
-        });
-    };
-    WalletComponent.prototype.getAccountAssets = function (account) {
-        var _this = this;
-        var deferred = this.$q.defer();
-        this.heat.api.getAccountBalances(account, "0", 1, 0, 100).then(function (balances) {
-            var assetInfos = [];
-            var promises = [];
-            balances.forEach(function (balance) {
-                if (balance.id != '0') {
-                    promises.push(_this.assetInfo.getInfo(balance.id).then(function (info) {
-                        assetInfos.push(angular.extend(info, {
-                            userBalance: balance.virtualBalance
-                        }));
-                    }));
-                }
-            });
-            if (promises.length > 0) {
-                _this.$q.all(promises).then(function () {
-                    assetInfos.sort(function (a, b) {
-                        var textA = a.symbol.toUpperCase();
-                        var textB = b.symbol.toUpperCase();
-                        return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
-                    });
-                    deferred.resolve(assetInfos);
-                }, deferred.reject);
-            }
-            else {
-                deferred.resolve([]);
-            }
-        }, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.importSeed = function ($event) {
-        var _this = this;
-        this.promptSecretPlusPassword($event).then(function (data) {
-            var account = heat.crypto.getAccountId(data.secretPhrase);
-            var key = {
-                account: account,
-                secretPhrase: data.secretPhrase,
-                pincode: data.password,
-                name: ''
-            };
-            _this.localKeyStore.add(key);
-            var message = "Seed was successfully imported to your wallet";
-            _this.$mdToast.show(_this.$mdToast.simple().textContent(message).hideDelay(5000));
-            heat.fullApplicationScopeReload();
-        });
-    };
-    WalletComponent.prototype.exportWallet = function () {
-        var exported = this.localKeyStore.export();
-        var encoded = this.walletFile.encode(exported);
-        var blob = new Blob([encoded], { type: "text/plain;charset=utf-8" });
-        saveAs(blob, 'heat.wallet');
-    };
-    WalletComponent.prototype.promptSecretPlusPassword = function ($event) {
-        var self = this;
-        function DialogController($scope, $mdDialog) {
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function () {
-                $mdDialog.hide({
-                    password: $scope['vm'].data.password1,
-                    secretPhrase: $scope['vm'].data.secretPhrase,
-                });
-            };
-            $scope['vm'].secretChanged = function () {
-                $scope['vm'].data.bip44Compatible = self.lightwalletService.validSeed($scope['vm'].data.secretPhrase);
-            };
-            $scope['vm'].data = {
-                password1: '',
-                password2: '',
-                secretPhrase: '',
-                bip44Compatible: false
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Import Seed/Private Key</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>Enter your Secret Seed and provide a Password (or Pin)</p>\n                <md-input-container flex>\n                  <label>HEAT Secret Phrase / Seed / Private Key</label>\n                  <textarea rows=\"2\" flex ng-model=\"vm.data.secretPhrase\" name=\"secretPhrase\" required ng-trim=\"false\" ng-change=\"vm.secretChanged() \"></textarea>\n                </md-input-container>\n                <md-input-container flex>\n                  <label>Password</label>\n                  <input type=\"password\" ng-model=\"vm.data.password1\" required name=\"password1\">\n                </md-input-container>\n                <md-input-container flex>\n                  <label>Password (confirm)</label>\n                  <input type=\"password\" ng-model=\"vm.data.password2\" required name=\"password2\">\n                </md-input-container>\n                <span>BIP44 compatible = <b>{{vm.data.bip44Compatible?'TRUE':'FALSE'}}</b></span>\n              </div>\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick()\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"dialogForm.$invalid || vm.data.password1 != vm.data.password2\" class=\"md-primary\"\n                  ng-click=\"vm.okButtonClick()\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.createEthAccount = function ($event) {
-        var walletEntries = this.walletEntries;
-        var self = this;
-        if (walletEntries.length == 0)
-            return;
-        function DialogController2($scope, $mdDialog) {
-            $scope['vm'].copySeed = function () {
-                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
-            };
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function ($event) {
-                var walletEntry = $scope['vm'].data.selectedWalletEntry;
-                var success = false;
-                if (walletEntry) {
-                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'Ethereum'; });
-                    success = node.createAddress(self);
-                    walletEntry.toggle(true);
-                }
-                $mdDialog.hide(null).then(function () {
-                    if (!success) {
-                        dialogs.alert($event, 'Unable to Create Address', 'Make sure you use the previous address first before you can create a new address');
-                    }
-                });
-            };
-            $scope['vm'].data = {
-                selectedWalletEntry: walletEntries[0],
-                selected: walletEntries[0].account,
-                walletEntries: walletEntries,
-                password: ''
-            };
-            $scope['vm'].selectedWalletEntryChanged = function () {
-                $scope['vm'].data.password = '';
-                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
-            };
-            $scope['vm'].passwordChanged = function () {
-                var password = $scope['vm'].data.password;
-                var account = $scope['vm'].data.selected;
-                var walletEntry = walletEntries.find(function (w) { return w.account == account; });
-                try {
-                    var key = self.localKeyStore.load(account, password);
-                    if (key) {
-                        self.localKeyStore.rememberPassword(walletEntry.account, password);
-                        walletEntry.pin = password;
-                        walletEntry.secretPhrase = key.secretPhrase;
-                        walletEntry.bip44Compatible = self.lightwalletService.validSeed(key.secretPhrase);
-                        walletEntry.unlocked = true;
-                        self.initWalletEntry(walletEntry);
-                        walletEntry.toggle(true);
-                    }
-                }
-                catch (e) { }
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController2,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create Ethereum Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new Ethereum address, please choose the master HEAT account you want to attach the new Ethereum address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Put In Password -->\n\n                <div flex layout=\"column\" ng-if=\"vm.data.selectedWalletEntry && !vm.data.selectedWalletEntry.unlocked\">\n                  <p>\n                    Please first unlock this account by entering your password below\n                  </p>\n                  <md-input-container flex >\n                    <label>Password</label>\n                    <input ng-model=\"vm.data.password\" ng-change=\"vm.passwordChanged()\">\n                  </md-input-container>\n                </div>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  Eth wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your Ethereum address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your Ethereum.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.createBtcAccount = function ($event) {
-        var walletEntries = this.walletEntries;
-        var self = this;
-        if (walletEntries.length == 0)
-            return;
-        function DialogController2($scope, $mdDialog) {
-            $scope['vm'].copySeed = function () {
-                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
-            };
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function ($event) {
-                var walletEntry = $scope['vm'].data.selectedWalletEntry;
-                var success = false;
-                if (walletEntry) {
-                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'Bitcoin'; });
-                    success = node.createBtcAddress(self);
-                    walletEntry.toggle(true);
-                }
-                $mdDialog.hide(null).then(function () {
-                    if (!success) {
-                        dialogs.alert($event, 'Unable to Create Address', 'Make sure you use the previous address first before you can create a new address');
-                    }
-                });
-            };
-            $scope['vm'].data = {
-                selectedWalletEntry: walletEntries[0],
-                selected: walletEntries[0].account,
-                walletEntries: walletEntries,
-                password: ''
-            };
-            $scope['vm'].selectedWalletEntryChanged = function () {
-                $scope['vm'].data.password = '';
-                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController2,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create Bitcoin Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new Bitcoin address, please choose the master HEAT account you want to attach the new Bitcoin address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  Btc wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your Bitcoin address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your Bitcoin.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.createFIMKAccount = function ($event) {
-        var walletEntries = this.walletEntries;
-        var self = this;
-        if (walletEntries.length == 0)
-            return;
-        function DialogController2($scope, $mdDialog) {
-            $scope['vm'].copySeed = function () {
-                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
-            };
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function ($event) {
-                var walletEntry = $scope['vm'].data.selectedWalletEntry;
-                var success = false;
-                if (walletEntry) {
-                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'FIMK'; });
-                    success = node.createFIMKAddress(self);
-                    walletEntry.toggle(true);
-                }
-                $mdDialog.hide(null).then(function () {
-                    if (!success) {
-                        dialogs.alert($event, 'Unable to Create Address', 'FIMK address already created for this account');
-                    }
-                });
-            };
-            $scope['vm'].data = {
-                selectedWalletEntry: walletEntries[0],
-                selected: walletEntries[0].account,
-                walletEntries: walletEntries,
-                password: ''
-            };
-            $scope['vm'].selectedWalletEntryChanged = function () {
-                $scope['vm'].data.password = '';
-                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController2,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create FIMK Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new FIMK address, please choose the master HEAT account you want to attach the new FIMK address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  FIMK wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your FIMK address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your FIMK.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.createNXTAccount = function ($event) {
-        var walletEntries = this.walletEntries;
-        var self = this;
-        if (walletEntries.length == 0)
-            return;
-        function DialogController2($scope, $mdDialog) {
-            $scope['vm'].copySeed = function () {
-                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
-            };
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function ($event) {
-                var walletEntry = $scope['vm'].data.selectedWalletEntry;
-                var success = false;
-                if (walletEntry) {
-                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'NXT'; });
-                    success = node.createNXTAddress(self);
-                    walletEntry.toggle(true);
-                }
-                $mdDialog.hide(null).then(function () {
-                    if (!success) {
-                        dialogs.alert($event, 'Unable to Create Address', 'NXT address already created for this account');
-                    }
-                });
-            };
-            $scope['vm'].data = {
-                selectedWalletEntry: walletEntries[0],
-                selected: walletEntries[0].account,
-                walletEntries: walletEntries,
-                password: ''
-            };
-            $scope['vm'].selectedWalletEntryChanged = function () {
-                $scope['vm'].data.password = '';
-                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController2,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create NXT Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new NXT address, please choose the master HEAT account you want to attach the new NXT address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  NXT wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your NXT address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your NXT.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent.prototype.createARDRAccount = function ($event) {
-        var walletEntries = this.walletEntries;
-        var self = this;
-        if (walletEntries.length == 0)
-            return;
-        function DialogController2($scope, $mdDialog) {
-            $scope['vm'].copySeed = function () {
-                self.clipboard.copyWithUI(document.getElementById('wallet-secret-textarea'), 'Copied seed to clipboard');
-            };
-            $scope['vm'].cancelButtonClick = function () {
-                $mdDialog.cancel();
-            };
-            $scope['vm'].okButtonClick = function ($event) {
-                var walletEntry = $scope['vm'].data.selectedWalletEntry;
-                var success = false;
-                if (walletEntry) {
-                    var node = walletEntry.currencies.find(function (c) { return c.isCurrencyAddressCreate && c.name == 'ARDOR'; });
-                    success = node.createARDRAddress(self);
-                    walletEntry.toggle(true);
-                }
-                $mdDialog.hide(null).then(function () {
-                    if (!success) {
-                        dialogs.alert($event, 'Unable to Create Address', 'ARDR address already created for this account');
-                    }
-                });
-            };
-            $scope['vm'].data = {
-                selectedWalletEntry: walletEntries[0],
-                selected: walletEntries[0].account,
-                walletEntries: walletEntries,
-                password: ''
-            };
-            $scope['vm'].selectedWalletEntryChanged = function () {
-                $scope['vm'].data.password = '';
-                $scope['vm'].data.selectedWalletEntry = walletEntries.find(function (w) { return $scope['vm'].data.selected == w.account; });
-            };
-        }
-        var deferred = this.$q.defer();
-        this.$mdDialog.show({
-            controller: DialogController2,
-            parent: angular.element(document.body),
-            targetEvent: $event,
-            clickOutsideToClose: false,
-            controllerAs: 'vm',
-            template: "\n        <md-dialog>\n          <form name=\"dialogForm\">\n            <md-toolbar>\n              <div class=\"md-toolbar-tools\"><h2>Create ARDR Address</h2></div>\n            </md-toolbar>\n            <md-dialog-content style=\"min-width:500px;max-width:600px\" layout=\"column\" layout-padding>\n              <div flex layout=\"column\">\n                <p>To create a new ARDR address, please choose the master HEAT account you want to attach the new ARDR address to:</p>\n\n                <!-- Select Master Account -->\n\n                <md-input-container flex>\n                  <md-select ng-model=\"vm.data.selected\" ng-change=\"vm.selectedWalletEntryChanged()\">\n                    <md-option ng-repeat=\"entry in vm.data.walletEntries\" value=\"{{entry.account}}\">{{entry.identifier}}</md-option>\n                  </md-select>\n                </md-input-container>\n\n                <!-- Invalid Non BIP44 Seed-->\n\n                <p ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && !vm.data.selectedWalletEntry.bip44Compatible\">\n                  ARDR wallet cannot be added to that old HEAT account. Please choose another or create a new HEAT account with BIP44 compatible seed.\n                </p>\n\n                <!-- Valid BIP44 Seed -->\n                <div flex layout=\"column\"\n                  ng-if=\"vm.data.selectedWalletEntry && vm.data.selectedWalletEntry.unlocked && vm.data.selectedWalletEntry.bip44Compatible\">\n\n                  <p>This is your ARDR address seed, It\u2019s the same as for your HEAT account {{vm.data.selectedWalletEntry.account}}.\n                      Please store it in a safe place or you may lose access to your ARDR.\n                      <a ng-click=\"vm.copySeed()\">Copy Seed</a></p>\n\n                  <md-input-container flex>\n                    <textarea rows=\"3\" flex ng-model=\"vm.data.selectedWalletEntry.secretPhrase\" readonly ng-trim=\"false\"\n                        style=\"font-family:monospace; font-size:16px; font-weight: bold; color: white; border: 1px solid white\"></textarea>\n                    <span id=\"wallet-secret-textarea\" style=\"display:none\">{{vm.data.selectedWalletEntry.secretPhrase}}</span>\n                  </md-input-container>\n\n                </div>\n              </div>\n\n            </md-dialog-content>\n            <md-dialog-actions layout=\"row\">\n              <span flex></span>\n              <md-button class=\"md-warn\" ng-click=\"vm.cancelButtonClick($event)\" aria-label=\"Cancel\">Cancel</md-button>\n              <md-button ng-disabled=\"!vm.data.selectedWalletEntry || !vm.data.selectedWalletEntry.unlocked || !vm.data.selectedWalletEntry.bip44Compatible\"\n                  class=\"md-primary\" ng-click=\"vm.okButtonClick($event)\" aria-label=\"OK\">OK</md-button>\n            </md-dialog-actions>\n          </form>\n        </md-dialog>\n      "
-        }).then(deferred.resolve, deferred.reject);
-        return deferred.promise;
-    };
-    WalletComponent = __decorate([
-        RouteConfig('/wallet'),
-        Component({
-            selector: 'wallet',
-            template: "\n   <!--  layout-align=\"start center\" -->\n    <div layout=\"column\"  flex layout-padding>\n      <div layout=\"row\">\n\n        <!-- Open File input is hidden -->\n        <md-button class=\"md-primary md-raised\">\n          <md-tooltip md-direction=\"bottom\">Open wallet file, adds all contents</md-tooltip>\n          <label for=\"walet-input-file\">\n            Import File\n          </label>\n        </md-button>\n        <input type=\"file\" onchange=\"angular.element(this).scope().vm.pageAddFileInputChange(this.files)\" class=\"ng-hide\" id=\"walet-input-file\">\n\n        <!-- Adds a wallet seed (heat secret phrase or bip44 eth/btc seed) -->\n        <md-button class=\"md-primary md-raised\" ng-click=\"vm.importSeed()\" aria-label=\"Import Seed\">\n          <md-tooltip md-direction=\"bottom\">Import Seed</md-tooltip>\n          Import Seed/Private Key\n        </md-button>\n\n        <!-- Export Wallet to File -->\n        <md-button class=\"md-warn md-raised\" ng-click=\"vm.exportWallet()\" aria-label=\"Export Wallet\" ng-if=\"!vm.allLocked\">\n          <md-tooltip md-direction=\"bottom\">Export Wallet File</md-tooltip>\n          Export Wallet File\n        </md-button>\n\n        <md-select class=\"wallet-dropdown md-warn md-raised\" placeholder=\"Create Address\" ng-change=\"vm.createAccount($event)\" ng-model=\"vm.selectedChain\">\n          <md-option ng-repeat=\"entry in vm.chains\" value=\"{{entry.name}}\" ng-disabled=\"{{entry.disabled}}\">{{entry.name}}</md-option>\n        </md-select>\n      </div>\n\n      <div layout=\"column\" layout-fill  flex>\n        <div layout-fill layout=\"column\" class=\"wallet-entries\" flex>\n\n          <!-- Build a wallet structure that contains ::\n                - wallet entries\n                - per entry currency balances\n                - per currency token balances  -->\n\n          <md-list layout-fill layout=\"column\" flex>\n            <md-list-item ng-repeat=\"entry in vm.entries\" ng-if=\"entry.visible && !entry.hidden\">\n\n              <!-- Wallet entry -->\n              <div ng-if=\"entry.isWalletEntry\" layout=\"row\" class=\"wallet-entry\" flex>\n                <!--\n                <md-checkbox ng-model=\"entry.selected\">\n                  <md-tooltip md-direction=\"bottom\">\n                    Check this to include in wallet export\n                  </md-tooltip>\n                </md-checkbox>\n                -->\n                <md-button class=\"md-icon-button left\" ng-click=\"entry.toggle()\">\n                  <md-icon md-font-library=\"material-icons\">{{entry.expanded?'expand_less':'expand_more'}}</md-icon>\n                </md-button>\n\n                <div flex ng-if=\"entry.secretPhrase\" class=\"identifier\"><a ng-click=\"entry.toggle()\">{{entry.identifier}}</a></div>\n                <div flex ng-if=\"!entry.secretPhrase\" class=\"identifier\">{{entry.identifier}}</div>\n                <md-button ng-if=\"!entry.unlocked\" ng-click=\"vm.unlock($event, entry)\">Sign in</md-button>\n\n                <md-menu md-position-mode=\"target-right target\" md-offset=\"34px 34px\" ng-if=\"entry.unlocked\">\n                  <md-button aria-label=\"user menu\" class=\"md-icon-button right\" ng-click=\"$mdOpenMenu($event)\" md-menu-origin >\n                    <md-icon md-font-library=\"material-icons\">more_horiz</md-icon>\n                  </md-button>\n                  <md-menu-content width=\"4\">\n                    <md-menu-item>\n                      <md-button aria-label=\"explorer\" ng-click=\"entry.showSecretPhrase()\">\n                        <md-icon md-font-library=\"material-icons\">file_copy</md-icon>\n                        Show private key\n                      </md-button>\n                    </md-menu-item>\n                    <md-menu-item>\n                      <md-button aria-label=\"explorer\" ng-click=\"vm.remove($event, entry)\">\n                        <md-icon md-font-library=\"material-icons\">delete_forever</md-icon>\n                        Remove\n                      </md-button>\n                    </md-menu-item>\n                  </md-menu-content>\n                </md-menu>\n              </div>\n\n              <!-- Currency Balance -->\n              <div ng-if=\"entry.isCurrencyBalance\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex><a ng-click=\"entry.unlock()\">{{entry.address}}</a></div>&nbsp;\n                <div class=\"balance\">{{entry.balance}}&nbsp;{{entry.symbol}}</div>\n              </div>\n\n              <!-- Currency Address Loading -->\n              <div ng-if=\"entry.isCurrencyAddressLoading\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex>Loading ..</div>\n              </div>\n\n              <!-- Currency Address Create -->\n              <div ng-if=\"entry.isCurrencyAddressCreate\" layout=\"row\" class=\"currency-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex></div>\n                <md-button ng-click=\"entry.createAddress()\">Create New</md-button>\n              </div>\n\n              <!-- Token Balance -->\n              <div ng-if=\"entry.isTokenBalance\" layout=\"row\" class=\"token-balance\" flex>\n                <div class=\"name\">{{entry.name}}</div>&nbsp;\n                <div class=\"identifier\" flex>{{entry.address}}</div>&nbsp;\n                <div class=\"balance\">{{entry.balance}}&nbsp;{{entry.symbol}}</div>\n              </div>\n\n            </md-list-item>\n          </md-list>\n        </div>\n      </div>\n    </div>\n  "
-        }),
-        Inject('$scope', '$q', 'localKeyStore', 'walletFile', '$window', 'lightwalletService', 'heat', 'assetInfo', 'ethplorer', '$mdToast', '$mdDialog', 'clipboard', 'user', 'bitcoreService', 'fimkCryptoService', 'nxtCryptoService', 'ardorCryptoService', 'nxtBlockExplorerService', 'ardorBlockExplorerService'),
-        __metadata("design:paramtypes", [Object, Function, LocalKeyStoreService,
-            WalletFileService, Object, LightwalletService,
-            HeatService,
-            AssetInfoService,
-            EthplorerService, Object, Object, ClipboardService,
-            UserService,
-            BitcoreService,
-            FIMKCryptoService,
-            NXTCryptoService,
-            ARDORCryptoService,
-            NxtBlockExplorerService,
-            ArdorBlockExplorerService])
-    ], WalletComponent);
-    return WalletComponent;
-}());
 var DialogFieldBuilder = (function () {
     function DialogFieldBuilder($scope) {
         this.$scope = $scope;
@@ -18509,4 +18509,4 @@ var ArdorOrdersProvider = (function () {
     return ArdorOrdersProvider;
 }());
 
-//# sourceMappingURL=../dist/maps/heat-ui-ZU8gYE.js.map
+//# sourceMappingURL=../dist/maps/heat-ui-TdQ1tI.js.map
