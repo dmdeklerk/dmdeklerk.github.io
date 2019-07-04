@@ -8122,7 +8122,7 @@ var SettingsService = (function () {
         this.env = env;
         this.http = http;
         this.VERSION = "3.0.0";
-        this.BUILD = "1562238966";
+        this.BUILD = "1562239961";
         this.settings = {};
         this.applyFailoverConfig();
         this.settings[SettingsService_1.DATEFORMAT_DEFAULT] = 'yyyy-mm-dd HH:MM:ss';
@@ -18509,4 +18509,4 @@ var ArdorOrdersProvider = (function () {
     return ArdorOrdersProvider;
 }());
 
-//# sourceMappingURL=../dist/maps/heat-ui-TdQ1tI.js.map
+//# sourceMappingURL=../dist/maps/heat-ui-kRUZSj.js.map
