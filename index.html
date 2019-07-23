@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
-    <meta http-equiv="Last-Modified" content="Thu Jul  4 13:53:56 CEST 2019">
-    <title>HEAT 3.0.0</title>
+    <meta http-equiv="Last-Modified" content="%BUILD_OVERRIDE_LAST_MODIFIED%">
+    <title>HEAT %BUILD_OVERRIDE_VERSION%</title>
     <style>
       html, body { height: 100%; }
       md-input-container .md-errors-spacer { min-height: 0; }
@@ -31,11 +31,17 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="material-750b02beaa.css"/>
     <!-- custom css -->
-    <link rel="stylesheet" href="styles/index-ImaGO8.css">
+    <link rel="stylesheet" href="styles/index-m4Zyxj.css">
 
     <div layout="column" flex layout-fill class="application-content" ng-if="showApp">
       <div flex layout-fill layout="column">
         <downloading-blockchain></downloading-blockchain>
+        <div style="background-color: rgba(255, 72, 0, 0.938); color: white; padding: 10px;">
+          <b>Starting <u>July 23</u> untill <u>July 26</u> Heat public wallet has limited availability.</b><br>
+          Most systems except withdrawal and deposit of Bitcoin will be available.<br>
+          We recommend the desktop wallet for your best exerience <a href="https://github.com/Heat-Ledger-Ltd/heatwallet/releases">FULL CLIENT</a> | <a href="https://github.com/Heat-Ledger-Ltd/heat-ui/releases">LIGHT CLIENT</a> and run your local server.<br>
+        </div>
+
         <toolbar></toolbar>
         <div ng-viewport flex layout-fill layout="column"></div>
       </div>
@@ -119,15 +125,15 @@
        We hide the window.require and window.module at the start of
        node_modules.js and restore them at the end. -->
 
-  <script defer src="node_modules-5e39df2dc2.js"></script>
+  <script defer src="node_modules-d0684c53f7.js"></script>
 
   <!-- <script src="../node_modules/heat-libs/dist/heat-libs.umd.js" defer></script> -->
 
   <script defer src="charting-731fcdbfa7.js"></script>
 
-  <script defer src="lib-pRbL2A.js" defer></script>
-  <script defer src="tshelpers-tmLzNq.js" defer></script>
-  <script defer src="heat-ui-st5RM3.js" defer></script>
+  <script defer src="lib-yO-t6E.js" defer></script>
+  <script defer src="tshelpers-jhsAaB.js" defer></script>
+  <script defer src="heat-ui-ui7-Uj.js" defer></script>
   <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
       new heat.Loader();
@@ -156,4 +162,3 @@
     */
   </script>
 </html>
-<!--Thu Jul  4 13:53:56 CEST 2019-->
