@@ -22,7 +22,7 @@
   "homepage": "http://heatledger.com",
   "dependencies": {
     "child-process-promise": "^2.2.0",
-    "tree-kill": "^1.1.0",
+    "tree-kill": "^1.2.2",
     "electron-contextmenu-middleware": "^1.0.3",
     "electron-input-menu": "^2.1.0"
   }
